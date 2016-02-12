@@ -1,65 +1,110 @@
+#include <iostream>
 #include "MyScheduller.h"
 
-//конструктор
-MyScheduller::MyScheduller(QVector <QPair <QString, QString>> variables, QObject *parent) : QObject(parent)
+//пустой конструктор
+MyScheduller::MyScheduller(QObject *parent) : QObject(parent)
 {
-    qDebug() << "Starting MyScheduller...";
-    for(int i=0; i<variables.length(); i++)
-        addNewTask(variables.at(i), nextTasks);
+    std::cout << "[Scheduller]: Starting...\n";
+}
+
+//конструктор, принимающий одно задание
+MyScheduller::MyScheduller(TaskPair oneTask, QObject *parent) : QObject(parent)
+{
+    std::cout << "[Scheduller]: Starting...\n";
+    append(oneTask);
+}
+
+//конструктор, принимающий перечень заданий
+MyScheduller::MyScheduller(TaskVector taskVector, QObject *parent) : QObject(parent)
+{
+    std::cout << "[Scheduller]: Starting...\n";
+    appendNewtTask(taskVector);
+
+    /*qDebug() << "Starting MyScheduller...";
+    for(int i=0; i<taskVector.length(); i++)
+        addNewTask(taskVector.at(i), nextTasks);
     timeCounter.start(1000);              //забить в QSettings
-    connect(&timeCounter, SIGNAL(timeout()), this, SLOT(slotAlarm()));
-    connect(this, SIGNAL(updateTasks(QVector<QPair<QString,QString> >)), this, SLOT(slotUpdateTasks(QVector<QPair<QString,QString> >)));
+    connect(&timeCounter, SIGNAL(timeout()), this, SLOT(slotStartTask()));*/
+    //connect(this, SIGNAL(updateTasks(TaskVector)), this, SLOT(slotUpdateTasks(TaskVector)));
 }
 
 //добавить новое задание в список
-void MyScheduller::addNewTask(QPair <QString, QString> newTask, QVector <QPair <QDateTime, QPair <QString, QString>>> &vect)
+void MyScheduller::append(TaskPair oneTask)
 {
-    qDebug() << "Adding new task = " << newTask;
-    QVector <QDateTime> nextDT = calcNewCron(newTask.first);
-    for(int i=0; i<nextDT.size(); i++)
+    taskVect.append(oneTask);
+    appendNewtTask(oneTask);
+}
+
+//добавить перечень новых заданий в список
+void MyScheduller::append(TaskVector taskVector)
+{
+    taskVect = taskVector;
+    append(taskVector);
+}
+
+//расчет вектора срабатывания для одного задания
+void MyScheduller::appendNewtTask(TaskPair oneTask)
+{
+    std::cout << "[Scheduller]: adding new task: ";
+    std::cout << oneTask.first.toStdString() << " " << oneTask.second.toStdString() << "\n";
+    QVector<QDateTime> dates = calcNewDatetime(oneTask.first);  //получение массива дат для следующего срабатывания
+    for(int i=0; i<dates.size(); i++)
     {
-        QPair <QDateTime, QPair <QString, QString>> pair(nextDT.at(i), newTask);
-        vect.append(pair);
+        TaskTime pair(dates.at(i), oneTask);
+        nextTasks.append(pair);                             //добавление дат срабатывания для задания к вектору срабатывания
     }
 }
 
-//удалить задание из списка
-void MyScheduller::removeTask(QPair<QDateTime, QPair<QString, QString> > task)
+//расчет вектора срабатывания для перечня заданий
+void MyScheduller::appendNewtTask(TaskVector taskVector)
 {
-    qDebug() << "Removing new task = " << task;
-    nextTasks.removeOne(task);
+    std::cout << "[Scheduller]: is vector of tasks:\n";
+    for(int i=0; i<taskVector.size(); i++)
+        append(taskVector.at(i));
 }
 
-//вычислить дату выполнения следующего задания
-QVector <QDateTime> MyScheduller::calcNewCron(QString cronjob)
+//метод рассчитывает даты срабатывания по cron-выражению
+QVector <QDateTime> MyScheduller::calcNewDatetime(QString cronjob)
 {
     QVector <QDateTime> nextDate;
     QStringList crons = cronjob.split(" ");                         //делим строку на части по пробелам
-    if(crons.size() == 5)                                           //============================
-    {                                                               //
-        minute = parseCronJob(crons.at(0), 0, MINUTES);             //
-        hour = parseCronJob(crons.at(1), 0, HOURS);                 //вычисляем массив значений
-        dayOfMonth = parseCronJob(crons.at(2), 1, DAYS_OF_MONTH);   //для каждой единицы даты
-        month = parseCronJob(crons.at(3), 1, MONTHS);               //
-        dayOfWeek = parseCronJob(crons.at(4), 1, DAYS_OF_WEEK);     //=============================
-        nextDate = getNextDate();                                   //получаем ветор новых времен срабатываний таска
-    }
-    else
+    //если количество полученных частей не равно 5, то cron-выражение является ошибочным
+    try
     {
-        qDebug() << "Error cronjob!";
+        if(crons.size() != 5)
+        {
+            throw crons.size();
+        }
+        else
+        {
+            minute = parseCronJob(crons.at(0), 0, MINUTES);
+            hour = parseCronJob(crons.at(1), 0, HOURS);                 //вычисляем массив значений
+            dayOfMonth = parseCronJob(crons.at(2), 1, DAYS_OF_MONTH);   //для каждой составляющей даты
+            month = parseCronJob(crons.at(3), 1, MONTHS);
+            dayOfWeek = parseCronJob(crons.at(4), 1, DAYS_OF_WEEK);
+            nextDate = getNextDate();                                   //получаем перечень, содержащий время срабатываний заданий
+        }
+    }
+    catch(int)
+    {
+        std::cout << "[Scheduller]: Error: Invalid cronjob \"";
+        std::cout << cronjob.toStdString() << "\"\n";
     }
     return nextDate;
 }
 
-//распарсить крон-выражение
+//метод парсит крон-выражение и возвращает значение срабатывания для каждой единицы времени
 QVector<int> MyScheduller::parseCronJob(QString cronJob, int minLimit, int maxLimit)
 {
     QVector <int> res;
+    //обработка последовательностей типа '*' и '*/step',
+    //где step - значение интервала, в который выполняется операция,
+    //* - любое значение
     if(cronJob.contains("*"))
     {
         if(cronJob.contains("/"))
         {
-            //символ "*/step", где step - интервал
+            //символ "*/step"
             int step = cronJob.section("/", 1, 1).toInt();
             if(step >= minLimit && step<maxLimit)
                 for(int i=0; i<maxLimit; i = i+step)
@@ -71,8 +116,13 @@ QVector<int> MyScheduller::parseCronJob(QString cronJob, int minLimit, int maxLi
             res.append(-1);
         }
      }
+     //обаботка последовательностей типа 'start-finish' 'start-finish/step',
+     //где start - начальное значение срабатывания,
+     //stop - конечное значение срабатывания,
+     //step - значение интервала, в который выполняется операция
      else if(cronJob.contains("-"))
         {
+            //значения типа start-finish/step
             if(cronJob.contains("/"))
             {
                 QString tmp = cronJob.section("-", 1, 1);
@@ -86,51 +136,79 @@ QVector<int> MyScheduller::parseCronJob(QString cronJob, int minLimit, int maxLi
                 int step = cronJob.section("/", 1, 1).toInt();
 
                 for(int i=start; i<=finish; i+=step)
-                    //значения типа start-finish/step
                     res.append(i);
             }
+            //значения типа "start"-"finish"
             else
             {
                 int start = cronJob.section("-", 0, 0).toInt();
                 int finish = cronJob.section("-", 1, 1).toInt();
                 if(start > minLimit && finish < maxLimit)
                     for(int j=start; j<=finish; j++)
-                    {
-                        //интервал "start"-"finish"
                         res.append(j);
-                    }
                 else res.append(0);
             }
         }
+        //перечисление значений через ","
         else if(cronJob.contains(","))
         {
             QStringList result;
             result = cronJob.split(",");
-            //перечень значений через ","
             for(int j=0; j<result.size(); j++)
                 if(result.at(j).toInt() > minLimit && result.at(j).toInt() < maxLimit)
                     res.append(result.at(j).toInt());
                 else res.append(0);
         }
+        //значения типа "start/step", где
+        //start - начальное значение,
+        //step - интервал, в который срабатывает вызов
         else if(cronJob.contains("/"))
         {
             int start = cronJob.section("/", 0, 0).toInt();
             int step = cronJob.section("/", 1, 1).toInt();
             if(start >= minLimit && start < maxLimit)
                 for(int i=start; i<maxLimit; i=i+step)
-                    //значения типа start/step
                     res.append(i);
         }
+        //число, входящее в рамки допустимых значений для данной временной единицы
         else if((cronJob.toInt() < maxLimit) && (cronJob.toInt() > minLimit))
         {
             res.append(cronJob.toInt());
         }
+        //ВЫПИЛИТЬ???!!! НУ ИЛИ ОТЛОВИТЬ TRY/CATCH
         else
         {
             res.append(0);
         }
     return res;
 }
+
+/*void MyScheduller::addNewTask(QPair <QString, QString> newTask, QVector <QPair <QDateTime, QPair <QString, QString>>> &vect)
+{
+    qDebug() << "Adding new task = " << newTask;
+    QVector <QDateTime> nextDT = calcNewCron(newTask.first);
+    for(int i=0; i<nextDT.size(); i++)
+    {
+        QPair <QDateTime, QPair <QString, QString>> pair(nextDT.at(i), newTask);
+        vect.append(pair);
+    }
+}*/
+
+
+
+
+
+
+//удалить задание из списка
+void MyScheduller::removeTask(QPair<QDateTime, QPair<QString, QString> > task)
+{
+    qDebug() << "Removing new task = " << task;
+    nextTasks.removeOne(task);
+}
+
+
+
+
 
 //вычисление даты следующего срабатывания выражения
 QVector<QDateTime> MyScheduller::getNextDate()
@@ -356,7 +434,7 @@ QVector <QDateTime> MyScheduller::calcTime(QVector<int> time, QVector <QDateTime
 }
 
 //мониторинг времени до выполнения нового задания
-void MyScheduller::slotAlarm()
+void MyScheduller::slotStartTask()
 {
     QDateTime curDate = QDateTime::currentDateTime();
     //bool fl = false;
@@ -381,11 +459,11 @@ void MyScheduller::slotAlarm()
 }
 
 //
-void MyScheduller::slotUpdateTasks(QVector<QPair<QString, QString> > variables)
+void MyScheduller::slotUpdateTasks(TaskVector variables)
 {
     nextTasks.clear();
     for(int i=0; i<variables.length(); i++)
-        addNewTask(variables.at(i), nextTasks);
+        append(variables.at(i));
 }
 
 //деструктор
