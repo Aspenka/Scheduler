@@ -18,7 +18,8 @@ MyScheduller::MyScheduller(TaskPair oneTask, QObject *parent) : QObject(parent)
 MyScheduller::MyScheduller(TaskVector taskVector, QObject *parent) : QObject(parent)
 {
     std::cout << "[Scheduller]: Starting...\n";
-    appendNewtTask(taskVector);
+    //timeCounter = new QTimer();
+    appendNewTask(taskVector);
 
     /*qDebug() << "Starting MyScheduller...";
     for(int i=0; i<taskVector.length(); i++)
@@ -32,7 +33,7 @@ MyScheduller::MyScheduller(TaskVector taskVector, QObject *parent) : QObject(par
 void MyScheduller::append(TaskPair oneTask)
 {
     taskVect.append(oneTask);
-    appendNewtTask(oneTask);
+    appendNewTask(oneTask);
 }
 
 //добавить перечень новых заданий в список
@@ -43,10 +44,10 @@ void MyScheduller::append(TaskVector taskVector)
 }
 
 //расчет вектора срабатывания для одного задания
-void MyScheduller::appendNewtTask(TaskPair oneTask)
+void MyScheduller::appendNewTask(TaskPair oneTask)
 {
-    std::cout << "[Scheduller]: adding new task: ";
-    std::cout << oneTask.first.toStdString() << " " << oneTask.second.toStdString() << "\n";
+    //std::cout << "[Scheduller]: adding new task: ";
+    //std::cout << oneTask.first.toStdString() << " " << oneTask.second.toStdString() << "\n";
     QVector<QDateTime> dates = calcNewDatetime(oneTask.first);  //получение массива дат для следующего срабатывания
     for(int i=0; i<dates.size(); i++)
     {
@@ -56,11 +57,13 @@ void MyScheduller::appendNewtTask(TaskPair oneTask)
 }
 
 //расчет вектора срабатывания для перечня заданий
-void MyScheduller::appendNewtTask(TaskVector taskVector)
+void MyScheduller::appendNewTask(TaskVector taskVector)
 {
-    std::cout << "[Scheduller]: is vector of tasks:\n";
+    //std::cout << "[Scheduller]: is vector of tasks:\n";
     for(int i=0; i<taskVector.size(); i++)
         append(taskVector.at(i));
+    //TaskTime time = nextTasks.at(2);
+    //remove(time);
 }
 
 //метод рассчитывает даты срабатывания по cron-выражению
@@ -77,11 +80,11 @@ QVector <QDateTime> MyScheduller::calcNewDatetime(QString cronjob)
         }
         else
         {
-            minute = parseCronJob(crons.at(0), 0, MINUTES);
-            hour = parseCronJob(crons.at(1), 0, HOURS);                 //вычисляем массив значений
+            minute = parseCronJob(crons.at(0), 0, MINUTES);             //===========================
+            hour = parseCronJob(crons.at(1), 0, HOURS);                 //получаем массив значений
             dayOfMonth = parseCronJob(crons.at(2), 1, DAYS_OF_MONTH);   //для каждой составляющей даты
-            month = parseCronJob(crons.at(3), 1, MONTHS);
-            dayOfWeek = parseCronJob(crons.at(4), 1, DAYS_OF_WEEK);
+            month = parseCronJob(crons.at(3), 1, MONTHS);               //
+            dayOfWeek = parseCronJob(crons.at(4), 1, DAYS_OF_WEEK);     //============================
             nextDate = getNextDate();                                   //получаем перечень, содержащий время срабатываний заданий
         }
     }
@@ -183,59 +186,32 @@ QVector<int> MyScheduller::parseCronJob(QString cronJob, int minLimit, int maxLi
     return res;
 }
 
-/*void MyScheduller::addNewTask(QPair <QString, QString> newTask, QVector <QPair <QDateTime, QPair <QString, QString>>> &vect)
-{
-    qDebug() << "Adding new task = " << newTask;
-    QVector <QDateTime> nextDT = calcNewCron(newTask.first);
-    for(int i=0; i<nextDT.size(); i++)
-    {
-        QPair <QDateTime, QPair <QString, QString>> pair(nextDT.at(i), newTask);
-        vect.append(pair);
-    }
-}*/
-
-
-
-
-
-
-//удалить задание из списка
-void MyScheduller::removeTask(QPair<QDateTime, QPair<QString, QString> > task)
-{
-    qDebug() << "Removing new task = " << task;
-    nextTasks.removeOne(task);
-}
-
-
-
-
-
 //вычисление даты следующего срабатывания выражения
 QVector<QDateTime> MyScheduller::getNextDate()
 {
     QVector <QDateTime> nextDate;
     QVector <QDateTime> tmp;
 
-    tmp = calcTime(minute, nextDate, MINUTES);
+    tmp = calcTimeUnit(minute, nextDate, MINUTES);
     nextDate = tmp;
     tmp.clear();
 
-    tmp = calcTime(hour, nextDate, HOURS);
+    tmp = calcTimeUnit(hour, nextDate, HOURS);
     nextDate.clear();
     nextDate = tmp;
     tmp.clear();
 
-    tmp = calcTime(dayOfMonth, nextDate, DAYS_OF_MONTH);
+    tmp = calcTimeUnit(dayOfMonth, nextDate, DAYS_OF_MONTH);
     nextDate.clear();
     nextDate = tmp;
     tmp.clear();
 
-    tmp = calcTime(month, nextDate, MONTHS);
+    tmp = calcTimeUnit(month, nextDate, MONTHS);
     nextDate.clear();
     nextDate = tmp;
     tmp.clear();
 
-    tmp = calcTime(dayOfWeek, nextDate, DAYS_OF_WEEK);
+    tmp = calcTimeUnit(dayOfWeek, nextDate, DAYS_OF_WEEK);
     nextDate.clear();
     nextDate = tmp;
     tmp.clear();
@@ -244,7 +220,7 @@ QVector<QDateTime> MyScheduller::getNextDate()
 }
 
 //Функция возвращает вычисленную часть даты, поступившую на вход
-QVector <QDateTime> MyScheduller::calcTime(QVector<int> time, QVector <QDateTime> nextDate, int limit)
+QVector <QDateTime> MyScheduller::calcTimeUnit(QVector<int> time, QVector <QDateTime> nextDate, int limit)
 {
     QDateTime date;
     if(nextDate.size()<1)
@@ -433,29 +409,86 @@ QVector <QDateTime> MyScheduller::calcTime(QVector<int> time, QVector <QDateTime
     return newDate;
 }
 
-//мониторинг времени до выполнения нового задания
-void MyScheduller::slotStartTask()
+//удалить одно задание из списка
+void MyScheduller::removeOne(TaskTime task)
 {
-    QDateTime curDate = QDateTime::currentDateTime();
-    //bool fl = false;
+    nextTasks.removeOne(task);
+}
 
+//удалить все задания, содержащие cron-выражение и имя таска, переданных в параметре
+void MyScheduller::remove(TaskPair oneTask)
+{
     for(int i=0; i<nextTasks.size(); i++)
     {
-        if((curDate.date().month() == nextTasks.at(i).first.date().month())&&
-           (curDate.date().day() == nextTasks.at(i).first.date().day())&&
-           (curDate.date().dayOfWeek() == nextTasks.at(i).first.date().dayOfWeek())&&
-           (curDate.time().minute() == nextTasks.at(i).first.time().minute())&&
-           (curDate.time().hour() == nextTasks.at(i).first.time().hour()))
+        if(nextTasks.at(i).second == oneTask)
+            removeOne(nextTasks.at(i));
+    }
+}
+
+//очистить вектор срабатываний
+void MyScheduller::clear()
+{
+    nextTasks.clear();
+}
+
+
+/*void MyScheduller::addNewTask(QPair <QString, QString> newTask, QVector <QPair <QDateTime, QPair <QString, QString>>> &vect)
+{
+    qDebug() << "Adding new task = " << newTask;
+    QVector <QDateTime> nextDT = calcNewCron(newTask.first);
+    for(int i=0; i<nextDT.size(); i++)
+    {
+        QPair <QDateTime, QPair <QString, QString>> pair(nextDT.at(i), newTask);
+        vect.append(pair);
+    }
+}*/
+
+int MyScheduller::calcTimeout(TaskTime oneTask)
+{
+    int msec;
+    QDateTime curDate = QDateTime::currentDateTime();
+    QDateTime taskDate = oneTask.first;
+    msec = (taskDate.toTime_t() - curDate.toTime_t())*1000;
+    if(msec > INT_MAX||msec < 0)
+    {
+        return -1;
+    }
+    return msec;
+}
+
+void MyScheduller::startSheduller()
+{
+    timer = new Timer[nextTasks.size()];
+    for(int i=0; i<nextTasks.size(); i++)
+    {
+        int interval = calcTimeout(nextTasks.at(i));
+        if(interval >= 0)
         {
-            qDebug() << "ALARM!!" << nextTasks.at(i).first.toString("dd/MM/yy hh:mm:ss");
-            timeCounter.stop();
-            timeCounter.start(60000);
-            //fl = true;
-            emit timeOut(nextTasks.at(i).second.second);
-            //emit updateTasks(tasks);
+            timer[i].setIndex(i);
+            timer[i].start(interval);
+            connect(&timer[i], SIGNAL(timeout()), &timer[i], SLOT(sentTimerIndex()));
+            connect(&timer[i], SIGNAL(sentIndex(int)), this, SLOT(slotReaction(int)));
         }
     }
-    //if(fl != false)emit updateTasks(tasks);
+}
+
+void MyScheduller::slotReaction(int ind)
+{
+    timer[ind].stop();
+    QDateTime curDate = QDateTime::currentDateTime();
+    for(int i=0; i < nextTasks.size(); i++)
+    {
+        if((curDate.date().month() == nextTasks.at(i).first.date().month())&&
+          (curDate.date().day() == nextTasks.at(i).first.date().day())&&
+          (curDate.date().dayOfWeek() == nextTasks.at(i).first.date().dayOfWeek())&&
+          (curDate.time().minute() == nextTasks.at(i).first.time().minute())&&
+          (curDate.time().hour() == nextTasks.at(i).first.time().hour()))
+        {
+            qDebug() << "[Scheduller " << nextTasks.at(i).first.toString("dd/MM/yy hh:mm:ss") << "]:    " << "Call " << nextTasks.at(i).second.second;
+            emit timeOut(nextTasks.at(i).second.second);
+        }
+    }
+    qDebug() << taskVect.size();
 }
 
 //

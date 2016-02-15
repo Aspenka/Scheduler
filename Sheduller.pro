@@ -17,7 +17,9 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp \
-    MyScheduller.cpp
+    MyScheduller.cpp \
+    timer.cpp
 
 HEADERS += \
-    MyScheduller.h
+    MyScheduller.h \
+    timer.h
