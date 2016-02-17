@@ -25,6 +25,27 @@ enum timeLimits
     DAYS_OF_WEEK = 7    //дни недели
 };
 
+//перечисление типов крон-выражений
+enum valueType
+{
+    ANY = -1,
+    ANY_STEP = -2,
+    INTERVAL = -3,
+    INTERVAL_STEP = -4,
+    ENUMERATION = -5,
+    START_STEP = -6,
+    VALUE = -7
+};
+
+//
+struct valueProperties
+{
+    int type;
+    QVector<int> startVal;
+    int step=0;
+    int finish = 0;
+};
+
 //класс предназначен для вызова определенных процедур в указанное время, представленное в виде cron-выражения
 class MyScheduller : public QObject
 {
@@ -35,20 +56,37 @@ private:
     TaskTimeVector nextTasks;   //вектор срабатываний, содержащий задание и время, в которое оно должно сработать
     Timer *timer;
 
-    QVector <int>   minute,     //значение минут
+    /*QVector <int>   minute,     //значение минут
                     hour,       //значение часов
                     dayOfMonth, //значение дней месяца
                     month,      //значение месяца
-                    dayOfWeek;  //значение дня недели
+                    dayOfWeek;  //значение дня недели*/
+    valueProperties minute,     //значение минут
+                    hour,       //значение часов
+                    dayOfMonth, //значение дней месяца
+                    month,      //значение месяца
+                    dayOfWeek;
+
 
     void appendNewTask(TaskPair oneTask);          //метод рассчитывает вектор срабатывания одного задания
     void appendNewTask(TaskVector taskVector);     //метод рассчитывает вектор срабатывания для перечня заданий
-    QVector <int> parseCronJob(QString cronJob, int minLimit, int maxLimit);    //метод обрабатывает cron-выражение и возвращает
-                                                                                //значение срабатывания для каждой единицы времени
-    QVector<QDateTime> calcNewDatetime(QString cronjob);//метод рассчитывает даты срабатывания по cron-выражению
-    QVector <QDateTime> getNextDate();   //расчет новой даты срабатывания
-    QVector<QDateTime> calcTimeUnit(QVector <int> time, QVector<QDateTime> nextDate, int limit);    //вычисление нового срабатывания
+
+    valueProperties parseCronJob(QString cronJob, int dateType);    //метод обрабатывает cron-выражение и возвращает
+                                                                    //значение срабатывания для каждой единицы времени
+    QDateTime calcNewDatetime(QString cronjob);//метод рассчитывает даты срабатывания по cron-выражению
+    QDateTime getDate(int dateType, valueProperties dateMean, QDateTime date);
+
+    QDateTime calcForAny(int dateType, QDateTime date);
+    QDateTime calcForAny(int dateType, int step, QDateTime date);
+    QDateTime calcForInterval(int dateType, int start, int finish, QDateTime date);
+    QDateTime calcForInterval(int dateType, int start, int finish, int step, QDateTime date);
+    QDateTime calcForEnum(int dateType, QVector<int> values, QDateTime date);
+    QDateTime calcForValue(int dateType, int start, int step, QDateTime date);
+    QDateTime calcForValue(int dateType, int value, QDateTime date);
+   // QVector <QDateTime> getNextDate();   //расчет новой даты срабатывания
+    //QVector<QDateTime> calcTimeUnit(QVector <int> time, QVector<QDateTime> nextDate, int limit);    //вычисление нового срабатывания
                                                                                                     //в зависимости от единицы времени
+    //QDateTime calcTimeUnit(int dateType, int dateMean, QDateTime date);
     void removeOne(TaskTime task);  //удалить задание
     int calcTimeout(TaskTime oneTask);   //высчитать время срабатывания для одного задания
 
@@ -69,9 +107,9 @@ public:
 
 signals:
     void timeOut(QString taskName);      //сигнал о начале выполнения нового задания
-    void updateTasks(TaskVector variables);
+    void updateTasks(int index);
 public slots:
-    void slotUpdateTasks(TaskVector variables);
+    void slotUpdateTasks(int index);
 
     void startSheduller();
     void slotReaction(int ind);

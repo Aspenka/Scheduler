@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
     vector.append(pair2);
     vector.append(pair3);
     MyScheduller shed(vector);
-    shed.startSheduller();
+    //shed.startSheduller();
 
     return a.exec();
 }
