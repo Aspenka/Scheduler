@@ -48,9 +48,11 @@ void MyScheduller::appendNewTask(TaskPair oneTask)
 {
     //std::cout << "[Scheduller]: adding new task: ";
     //std::cout << oneTask.first.toStdString() << " " << oneTask.second.toStdString() << "\n";
-    QDateTime dates = calcNewDatetime(oneTask.first);  //получение массива дат для следующего срабатывания
-    TaskTime pair(dates, oneTask);
+    //QDateTime dates = calcNewDatetime(oneTask.first);  //получение массива дат для следующего срабатывания
+    QDateTime date = parser.getDateTime(oneTask.first, oneTask.second);
+    TaskTime pair(date, oneTask);
     nextTasks.append(pair);                             //добавление дат срабатывания для задания к вектору срабатывания
+
 }
 
 //расчет вектора срабатывания для перечня заданий
@@ -64,7 +66,7 @@ void MyScheduller::appendNewTask(TaskVector taskVector)
 }
 
 //метод рассчитывает даты срабатывания по cron-выражению
-QDateTime MyScheduller::calcNewDatetime(QString cronjob)
+/*QDateTime MyScheduller::calcNewDatetime(QString cronjob)
 {
     QDateTime date = QDateTime::currentDateTime();
     QDateTime tmp;
@@ -105,273 +107,10 @@ QDateTime MyScheduller::calcNewDatetime(QString cronjob)
         std::cout << cronjob.toStdString() << "\"\n";
     }
     return date;
-}
+}*/
 
-//метод парсит крон-выражение и возвращает значение срабатывания для каждой единицы времени
-valueProperties MyScheduller::parseCronJob(QString cronJob, int dateType)
-{
-    valueProperties res;
-    if(cronJob.contains("*"))
-    {
-        if(cronJob.contains("/"))
-        {
-            res.step = cronJob.section("/", 1, 1).toInt();
-            res.type = ANY_STEP;
-        }
-        else res.type = ANY;
-    }
-    else if(cronJob.contains("-"))
-    {
-        if(cronJob.contains("/"))
-        {
-            QString tmp = cronJob.section("-", 1, 1);
-            tmp = tmp.section("/", 0, 0);
-            res.finish = tmp.toInt();
-            tmp.clear();
-            tmp = cronJob.section("-", 0, 0);
-            res.startVal.append(tmp.toInt());
-            res.step = cronJob.section("/", 1, 1).toInt();
-            res.type = INTERVAL_STEP;
-        }
-        else
-        {
-            res.startVal.append(cronJob.section("-", 0, 0).toInt());
-            res.finish = cronJob.section("-", 1, 1).toInt();
-            res.type = INTERVAL;
-        }
-    }
-    else if(cronJob.contains(","))
-    {
-        QStringList result;
-        result = cronJob.split(",");
-        for(int i=0; i<result.size(); i++)
-            res.startVal.append(result.at(i).toInt());
-        res.type = ENUMERATION;
-    }
-    else if(cronJob.contains("/"))
-    {
-        res.startVal.append(cronJob.section("/", 0, 0).toInt());
-        res.step = cronJob.section("/", 1, 1).toInt();
-        res.type = START_STEP;
-    }
-    else
-    {
-        res.startVal.append(cronJob.toInt());
-        res.type = VALUE;
-    }
-    return res;
 
-    /*
-    //обработка последовательностей типа '*' и '* /step',
-    //где step - значение интервала, в который выполняется операция,
-    // * - любое значение
-    if(cronJob.contains("*"))
-    {
-        if(cronJob.contains("/"))
-        {
-            //символ "* /step"
-            int step = cronJob.section("/", 1, 1).toInt();
-            if(step >= minLimit && step<maxLimit)
-                for(int i=0; i<maxLimit; i = i+step)
-                    res.append(i);
-        }
-        else
-        {
-            //символ "*"
-            res.append(-1);
-        }
-     }
-     //обаботка последовательностей типа 'start-finish' 'start-finish/step',
-     //где start - начальное значение срабатывания,
-     //stop - конечное значение срабатывания,
-     //step - значение интервала, в который выполняется операция
-     else if(cronJob.contains("-"))
-        {
-            //значения типа start-finish/step
-            if(cronJob.contains("/"))
-            {
-                QString tmp = cronJob.section("-", 1, 1);
-                tmp = tmp.section("/", 0, 0);
-                int finish = tmp.toInt();
-                tmp.clear();
-
-                tmp = cronJob.section("-", 0, 0);
-                int start = tmp.toInt();
-
-                int step = cronJob.section("/", 1, 1).toInt();
-
-                for(int i=start; i<=finish; i+=step)
-                    res.append(i);
-            }
-            //значения типа "start"-"finish"
-            else
-            {
-                int start = cronJob.section("-", 0, 0).toInt();
-                int finish = cronJob.section("-", 1, 1).toInt();
-                if(start > minLimit && finish < maxLimit)
-                    for(int j=start; j<=finish; j++)
-                        res.append(j);
-                else res.append(0);
-            }
-        }
-        //перечисление значений через ","
-        else if(cronJob.contains(","))
-        {
-            QStringList result;
-            result = cronJob.split(",");
-            for(int j=0; j<result.size(); j++)
-                if(result.at(j).toInt() > minLimit && result.at(j).toInt() < maxLimit)
-                    res.append(result.at(j).toInt());
-                else res.append(0);
-        }
-        //значения типа "start/step", где
-        //start - начальное значение,
-        //step - интервал, в который срабатывает вызов
-        else if(cronJob.contains("/"))
-        {
-            int start = cronJob.section("/", 0, 0).toInt();
-            int step = cronJob.section("/", 1, 1).toInt();
-            if(start >= minLimit && start < maxLimit)
-                for(int i=start; i<maxLimit; i=i+step)
-                    res.append(i);
-        }
-        //число, входящее в рамки допустимых значений для данной временной единицы
-        else if((cronJob.toInt() < maxLimit) && (cronJob.toInt() > minLimit))
-        {
-            res.append(cronJob.toInt());
-        }
-        //ВЫПИЛИТЬ???!!! НУ ИЛИ ОТЛОВИТЬ TRY/CATCH
-        else
-        {
-            res.append(0);
-        }
-    return res;*/
-}
-
-//
-QDateTime MyScheduller::getDate(int dateType, valueProperties dateMean, QDateTime date)
-{
-    switch(dateMean.type)
-    {
-        case ANY:
-        {
-            date = calcForAny(dateType, date);
-            break;
-        }
-    }
-    return date;
-}
-
-QDateTime MyScheduller::calcForAny(int dateType, QDateTime date)
-{
-    QDateTime res;
-    switch(dateType)
-    {
-        case MINUTES:
-        {
-            int m = QTime::currentTime().minute();
-            res.setTime(QTime(date.time().hour(), m));
-            res.setDate(date.date());
-            break;
-        }
-        case HOURS:
-        {
-            int h = QTime::currentTime().hour();
-            res.setTime(QTime(h, date.time().minute()));
-            res.setDate(date.date());
-            break;
-        }
-        case DAYS_OF_MONTH:
-        {
-            int dm = QDate::currentDate().day();
-            res.setTime(date.time());
-            res.setDate(QDate(date.date().year(), date.date().month(), dm));
-            break;
-        }
-        case MONTHS:
-        {
-            int mo = QDate::currentDate().month();
-            res.setTime(date.time());
-            res.setDate(QDate(date.date().year(), mo, date.date().day()));
-            break;
-        }
-        case DAYS_OF_WEEK:
-        {
-            res = date;
-            break;
-        }
-    }
-    return res;
-}
-
-QDateTime MyScheduller::calcForAny(int dateType, int step, QDateTime date)
-{
-    QDateTime res;
-    int start, sum;
-    switch(dateType)
-    {
-        case MINUTES:
-        {
-            start = QTime::currentTime().minute();
-            sum = start + step;
-            if(sum <= MINUTES)
-            {
-                res.setTime(QTime(date.time().hour(), sum));
-                res.setDate(date.date());
-            }
-            break;
-        }
-        case HOURS:
-        {
-            start = QTime::currentTime().hour();
-            sum = start + step;
-            if(sum <= HOURS)
-            {
-                res.setTime(QTime(sum, date.time().minute()));
-                res.setDate(date.date());
-            }
-            break;
-        }
-        case DAYS_OF_MONTH:
-        {
-            int start = QDate::currentDate().day();
-            sum = start + step;
-            int dom = QDate::currentDate().daysInMonth();
-            if(sum <= dom)
-            {
-                res.setDate(QDate(date.date().year(), date.date().month(), sum));
-                res.setTime(date.time());
-            }
-            break;
-        }
-        case MONTHS:
-        {
-            start = QDate::currentDate().month();
-            sum = start + step;
-            if(sum <= MONTHS)
-            {
-                res.setDate(QDate(date.date().year(), sum, date.date().day()));
-                res.setTime(date.time());
-            }
-            break;
-        }
-        case DAYS_OF_WEEK:
-        {
-            start = QDate::currentDate().dayOfWeek();
-            sum = start + step;
-            if(sum <= DAYS_OF_WEEK)
-            {
-                sum = QDate::currentDate().day() + step;
-                date.addDays(step);
-                res = date;
-            }
-            break;
-        }
-    }
-    return res;
-}
-
-//
+/*
 QDateTime MyScheduller::calcForEnum(int dateType, QVector<int> values, QDateTime date)
 {
     QDateTime res;
@@ -494,7 +233,7 @@ QDateTime MyScheduller::calcForEnum(int dateType, QVector<int> values, QDateTime
 
     }
     return res;
-}
+}*/
 
 //вычисление даты следующего срабатывания выражения
 /*QVector<QDateTime> MyScheduller::getNextDate()

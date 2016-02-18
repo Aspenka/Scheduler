@@ -18,8 +18,10 @@ TEMPLATE = app
 
 SOURCES += main.cpp \
     MyScheduller.cpp \
-    timer.cpp
+    CronParser.cpp \
+    Timer.cpp
 
 HEADERS += \
     MyScheduller.h \
-    timer.h
+    CronParser.h \
+    Timer.h
