@@ -1,5 +1,8 @@
 #include <iostream>
+#include <time.h>
 #include "MyScheduller.h"
+
+#define DBL_MAX  1.7976931348623158e+308
 
 //пустой конструктор
 MyScheduller::MyScheduller(QObject *parent) : QObject(parent)
@@ -39,8 +42,8 @@ void MyScheduller::appendNewTask(TaskPair oneTask)
 {   
     QDateTime date = parser.getDateTime(oneTask.first);
 
-    std::cout << "[Scheduller]: adding new task: ";
-    std::cout << date.toString("dd.MM.yy hh:mm").toStdString() << " " << oneTask.second.toStdString() << "\n";
+    //std::cout << "[Scheduller]: adding new task: ";
+    //std::cout << date.toString("dd.MM.yy hh:mm").toStdString() << " " << oneTask.second.toStdString() << "\n";
 
     TaskTime pair(date, oneTask);
     nextTasks.append(pair);                             //добавление дат срабатывания для задания к вектору срабатывания
@@ -62,6 +65,11 @@ void MyScheduller::remove(TaskPair oneTask)
     }
 }
 
+void MyScheduller::remove(int index)
+{
+    nextTasks.remove(index,1);
+}
+
 //очистить вектор срабатываний
 void MyScheduller::clear()
 {
@@ -70,31 +78,32 @@ void MyScheduller::clear()
 
 //метод подсчитывает время до следующего срабатывания таймера в миллисекундах
 //ДОДУМАТЬ!!!
-int MyScheduller::calcTimeout(TaskTime oneTask)
+double MyScheduller::calcTimeout(TaskTime oneTask)
 {
-    //int msec = (QDateTime::currentDateTime().toTime_t() - oneTask.first.toTime_t())*100;
-    int msec = (QDateTime::currentDateTime().toTime_t() - oneTask.first.toTime_t())*100;
-    //qDebug() << int(QDateTime::currentDateTime().toTime_t());
-    qDebug() << msec/(1000*60);
-    qDebug() << msec;
-    if(msec <= INT_MAX)
+    double msec = difftime(oneTask.first.toTime_t(), QDateTime::currentDateTime().toTime_t());
+    msec = msec*1000;
+    if((msec < 0) && (msec <= DBL_MAX))msec = 10;
+    if(msec <= DBL_MAX)
+    {
         return msec;
+    }
 }
 
 //метод запускает планировщик
 void MyScheduller::startSheduller()
 {
     std::cout << "[Scheduller]: Starting...\n";
+    connect(this, SIGNAL(updateTasks()), this, SLOT(slotUpdateTasks()));
     timer = new Timer[nextTasks.size()];
     for(int i=0; i<nextTasks.size(); i++)
     {
-        int interval = calcTimeout(nextTasks.at(i));
+        connect(&timer[i], SIGNAL(timeout()), &timer[i], SLOT(sentTimerIndex()));
+        connect(&timer[i], SIGNAL(sentIndex(int)), this, SLOT(slotReaction(int)));
+        double interval = calcTimeout(nextTasks.at(i));
         if(interval >= 0)
         {
             timer[i].setIndex(i);
             timer[i].start(interval);
-            connect(&timer[i], SIGNAL(timeout()), &timer[i], SLOT(sentTimerIndex()));
-            connect(&timer[i], SIGNAL(sentIndex(int)), this, SLOT(slotReaction(int)));
         }
     }
 }
@@ -102,7 +111,7 @@ void MyScheduller::startSheduller()
 //метод вызывает процедуры с нужным именем по таймауту таймера
 void MyScheduller::slotReaction(int ind)
 {
-    timer[ind].stop();
+    //timer[ind].stop();
     QDateTime curDate = QDateTime::currentDateTime();
     for(int i=0; i < nextTasks.size(); i++)
     {
@@ -114,17 +123,27 @@ void MyScheduller::slotReaction(int ind)
         {
             qDebug() << "[Scheduller" << nextTasks.at(i).first.toString("dd/MM/yy hh:mm") << "]:    " << "Call " << nextTasks.at(i).second.second;
             emit timeOut(nextTasks.at(i).second.second);
+            emit updateTasks();
         }
     }
 }
 
 //метод рассчитывает новое время срабатывания для заданий
-void MyScheduller::slotUpdateTasks(int index)
+void MyScheduller::slotUpdateTasks()
 {
-    //nextTasks.clear();
-    //for(int i=0; i<oneTask.length(); i++)
-        //append(oneTask.at(i));
-
+    nextTasks.clear();
+    append(taskVect);
+    for(int i=0; i < nextTasks.size(); i++)
+    {
+        timer[i].stop();
+        double interval = calcTimeout(nextTasks.at(i));
+        if(interval >= 0)
+        {
+            timer[i].setIndex(i);
+            if(interval > 10)
+                timer[i].start(interval);
+        }
+    }
 }
 
 //деструктор

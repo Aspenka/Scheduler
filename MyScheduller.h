@@ -30,7 +30,7 @@ private:
     void appendNewTask(TaskPair oneTask);          //метод рассчитывает вектор срабатывания одного задания
 
     void removeOne(TaskTime task);  //удалить задание
-    int calcTimeout(TaskTime oneTask);   //высчитать время срабатывания для одного задания
+    double calcTimeout(TaskTime oneTask);   //высчитать время срабатывания для одного задания
 
 public:
     explicit MyScheduller(QObject *parent = 0);  //пустой конструктор
@@ -42,6 +42,7 @@ public:
     void append(TaskVector taskVector);     //добавить перечень заданий
 
     void remove(TaskPair oneTask);  //удалить из вектора срабатывания все записи о конкретном задании и его cron-выражении
+    void remove(int index);
 
     void clear();   //очистить очередь заданий
 
@@ -49,9 +50,9 @@ public:
 
 signals:
     void timeOut(QString taskName);      //сигнал о начале выполнения нового задания
-    void updateTasks(int index);
+    void updateTasks();
 public slots:
-    void slotUpdateTasks(int index);
+    void slotUpdateTasks();
 
     void startSheduller();
     void slotReaction(int ind);
