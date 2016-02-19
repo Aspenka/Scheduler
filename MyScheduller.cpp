@@ -82,7 +82,6 @@ double MyScheduller::calcTimeout(TaskTime oneTask)
 {
     double msec = difftime(oneTask.first.toTime_t(), QDateTime::currentDateTime().toTime_t());
     msec = msec*1000;
-    if((msec < 0) && (msec <= DBL_MAX))msec = 10;
     if(msec <= DBL_MAX)
     {
         return msec;
@@ -111,7 +110,7 @@ void MyScheduller::startSheduller()
 //метод вызывает процедуры с нужным именем по таймауту таймера
 void MyScheduller::slotReaction(int ind)
 {
-    //timer[ind].stop();
+    timer[ind].stop();
     QDateTime curDate = QDateTime::currentDateTime();
     for(int i=0; i < nextTasks.size(); i++)
     {
@@ -135,13 +134,12 @@ void MyScheduller::slotUpdateTasks()
     append(taskVect);
     for(int i=0; i < nextTasks.size(); i++)
     {
-        timer[i].stop();
+        //timer[i].stop();
         double interval = calcTimeout(nextTasks.at(i));
         if(interval >= 0)
         {
             timer[i].setIndex(i);
-            if(interval > 10)
-                timer[i].start(interval);
+            timer[i].start(interval);
         }
     }
 }

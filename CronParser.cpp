@@ -91,6 +91,8 @@ QVector<int> CronParser::parse(QString cronJob, int minLimit, int maxLimit)
                            ((maxLimit == DAYS_OF_WEEK) && i != 0)||
                            ((maxLimit == MONTHS) && i != 0))
                         res.append(i);
+                        else if((maxLimit == HOURS) || (maxLimit == MINUTES))
+                            res.append(i);
                     }
             }
             else
