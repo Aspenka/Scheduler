@@ -5,14 +5,6 @@
 CronParser::CronParser(QObject *parent) : QObject(parent)
 {
     cronJob = "";
-    taskName = "";
-    cronDate = QDateTime::currentDateTime();
-}
-
-CronParser::CronParser(QString cron, QString task, QObject *parent) : QObject(parent)
-{
-    cronJob = cron;
-    taskName = task;
     cronDate = QDateTime::currentDateTime();
 }
 
@@ -21,24 +13,18 @@ QString CronParser::getCronJob()
     return cronJob;
 }
 
-QString CronParser::getTaskName()
-{
-    return taskName;
-}
-
-QDateTime CronParser::getDateTime(QString cron, QString task)
+QDateTime CronParser::getDateTime(QString cron)
 {
     cronJob = cron;
-    taskName = task;
     cronDate = calcTaskDate();
-    qDebug() << cronDate;
     return cronDate;
 }
 
 QDateTime CronParser::calcTaskDate()
 {
-    QDateTime date = QDateTime::currentDateTime();
-    QDateTime tmp;
+    QVector<QDateTime> dateList,
+                       tmp;
+    QDateTime optimalDate = QDateTime::currentDateTime();
     QStringList crons = cronJob.split(" ");                         //делим строку на части по пробелам;
     try
     {
@@ -48,25 +34,37 @@ QDateTime CronParser::calcTaskDate()
         }
         else
         {
-            dayOfWeek = parse(crons.at(4));
-            tmp = calcDateUnit(DAYS_OF_WEEK, dayOfWeek, date);
-            date = tmp;
+            month = parse(crons.at(3), 1, MONTHS);
+            tmp = calcDateUnit(month, dateList, MONTHS);
+            dateList = tmp;
+            tmp.clear();
 
-            month = parse(crons.at(3));
-            tmp = calcDateUnit(MONTHS, month, date);
-            date = tmp;
+            int dow = QDate::currentDate().daysInMonth();
+            dayOfMonth = parse(crons.at(2), 1, dow);
+            tmp = calcDateUnit(dayOfMonth, dateList, dow);
+            dateList.clear();
+            dateList = tmp;
+            tmp.clear();
 
-            dayOfMonth = parse(crons.at(2));
-            tmp = calcDateUnit(DAYS_OF_MONTH, dayOfMonth, date);
-            date = tmp;
+            dayOfWeek = parse(crons.at(4), 1, DAYS_OF_WEEK);
+            tmp = calcDateUnit(dayOfWeek, dateList, DAYS_OF_WEEK);
+            dateList.clear();
+            dateList = tmp;
+            tmp.clear();
 
-            hour = parse(crons.at(1));
-            tmp = calcDateUnit(HOURS, hour, date);
-            date = tmp;
+            hour = parse(crons.at(1), 0, HOURS);
+            tmp = calcDateUnit(hour, dateList, HOURS);
+            dateList.clear();
+            dateList = tmp;
+            tmp.clear();
 
-            minute = parse(crons.at(0));
-            tmp = calcDateUnit(MINUTES, minute, date);
-            date = tmp;
+            minute = parse(crons.at(0), 0, MINUTES);
+            tmp = calcDateUnit(minute, dateList, MINUTES);
+            dateList.clear();
+            dateList = tmp;
+            tmp.clear();
+
+            optimalDate = chooseReactionDate(dateList);
         }
     }
     catch(int)
@@ -74,352 +72,308 @@ QDateTime CronParser::calcTaskDate()
         std::cout << "[Scheduller]: Error: Invalid cronjob \"";
         std::cout << cronJob.toStdString() << "\"\n";
     }
-    return date;
+    return optimalDate;
 }
 
-ValueProperties CronParser::parse(QString cron)
+QVector<int> CronParser::parse(QString cronJob, int minLimit, int maxLimit)
 {
-    ValueProperties res;
-    if(cron.contains("*"))
-    {
-        if(cron.contains("/"))
+    QVector <int> res;
+        if(cronJob.contains("*"))
         {
-            res.step = cron.section("/", 1, 1).toInt();
-            res.type = ANY_STEP;
-        }
-        else res.type = ANY;
-    }
-    else if(cron.contains("-"))
-    {
-        if(cron.contains("/"))
-        {
-            QString tmp = cron.section("-", 1, 1);
-            tmp = tmp.section("/", 0, 0);
-            res.finish = tmp.toInt();
-            tmp.clear();
-            tmp = cron.section("-", 0, 0);
-            res.startVal.append(tmp.toInt());
-            res.step = cron.section("/", 1, 1).toInt();
-            res.type = INTERVAL_STEP;
-        }
-        else
-        {
-            res.startVal.append(cron.section("-", 0, 0).toInt());
-            res.finish = cron.section("-", 1, 1).toInt();
-            res.type = INTERVAL;
-        }
-    }
-    else if(cronJob.contains(","))
-    {
-        QStringList result;
-        result = cron.split(",");
-        for(int i=0; i<result.size(); i++)
-            res.startVal.append(result.at(i).toInt());
-        res.type = ENUMERATION;
-    }
-    else if(cronJob.contains("/"))
-    {
-        res.startVal.append(cron.section("/", 0, 0).toInt());
-        res.step = cron.section("/", 1, 1).toInt();
-        res.type = START_STEP;
-    }
-    else
-    {
-        res.startVal.append(cron.toInt());
-        res.type = VALUE;
-    }
-    return res;
-}
-
-QDateTime CronParser::calcDateUnit(int dateType, ValueProperties dateMean, QDateTime date)
-{
-    QDateTime result = date;
-    switch(dateMean.type)
-    {
-        case ANY:
-        {
-            result = anyDateTime(dateType, dateMean, date);
-            break;
-        }
-        case ANY_STEP:
-        {
-            dateMean.startVal.append(0);
-            result = anyDateTime(dateType, dateMean, date);
-            break;
-        }
-        case INTERVAL:
-        {
-            result = intervalDateTime(dateType, dateMean, date);
-            break;
-        }
-        case INTERVAL_STEP:
-        {
-            result = intervalDateTime(dateType, dateMean, date);
-            break;
-        }
-        case ENUMERATION:
-        {
-            break;
-        }
-        case START_STEP:
-        {
-            switch(dateType)
+            if(cronJob.contains("/"))
             {
-                case MINUTES:
-                {
-                    break;
-                }
-                case HOURS:
-                {
-                    break;
-                }
-                case DAYS_OF_MONTH:
-                {
-                    break;
-                }
-                case MONTHS:
-                {
-                    break;
-                }
-                case DAYS_OF_WEEK:
-                {
-                    break;
-                }
-            }
-            break;
-        }
-        case VALUE:
-        {
-            switch(dateType)
-            {
-                case MINUTES:
-                {
-                    break;
-                }
-                case HOURS:
-                {
-                    break;
-                }
-                case DAYS_OF_MONTH:
-                {
-                    break;
-                }
-                case MONTHS:
-                {
-                    break;
-                }
-                case DAYS_OF_WEEK:
-                {
-                    break;
-                }
-            }
-            break;
-        }
-    }
-    return result;
-}
-
-QDateTime CronParser::anyDateTime(int dateType, ValueProperties dateMean, QDateTime date)
-{
-    QDateTime result = QDateTime::currentDateTime();
-    switch(dateType)
-    {
-        case MINUTES:
-        {
-            int temp = QTime::currentTime().minute();
-            if(dateMean.startVal.empty())
-                dateMean.startVal.append(temp);
-            int min = calcSumma(dateMean.startVal.first(), MINUTES, temp, dateMean.step);
-            result.setDate(date.date());
-            result.setTime(QTime(date.time().hour(), min));
-            break;
-        }
-        case HOURS:
-        {
-            int temp = QTime::currentTime().hour();
-            if(dateMean.startVal.empty())
-                dateMean.startVal.append(temp);
-            int ho = calcSumma(dateMean.startVal.first(), HOURS, temp, dateMean.step);
-            result.setDate(date.date());
-            result.setTime(QTime(ho, date.time().minute()));
-            break;
-        }
-        case DAYS_OF_MONTH:
-        {
-            int temp = QDate::currentDate().day();
-            if(dateMean.startVal.empty())
-                dateMean.startVal.append(temp);
-            int dom = calcSumma(dateMean.startVal.first(), DAYS_OF_MONTH, temp, dateMean.step);
-            result.setDate(QDate(date.date().year(), date.date().month(), dom));
-            result.setTime(date.time());
-            break;
-        }
-        case MONTHS:
-        {
-            int temp = QDate::currentDate().month();
-            if(dateMean.startVal.empty())
-                dateMean.startVal.append(temp);
-            int limit = QDate::currentDate().daysInMonth();
-            int mon = calcSumma(dateMean.startVal.first(), limit, temp, dateMean.step);
-            result.setDate(QDate(date.date().year(), mon, date.date().day()));
-            result.setTime(date.time());
-            break;
-        }
-        case DAYS_OF_WEEK:
-        {
-            int temp = QDate::currentDate().dayOfWeek();
-            if(dateMean.startVal.empty())
-                dateMean.startVal.append(temp);
-            int dow = calcSumma(dateMean.startVal.first(), DAYS_OF_WEEK, temp, dateMean.step);
-            if(dow > 0)
-            {
-                date.addDays(dateMean.step);
-                result = date;
-            }
-            break;
-        }
-    }
-    return result;
-}
-
-QDateTime CronParser::intervalDateTime(int dateType, ValueProperties dateMean, QDateTime date)
-{
-    QDateTime result = QDateTime::currentDateTime();
-    switch(dateType)
-    {
-        case MINUTES:
-        {
-            int current = QTime::currentTime().minute();
-            int min = calcSumma(dateMean.startVal.first(), dateMean.finish, current, dateMean.step);
-            if(min >= current)
-            result.setTime(QTime(date.time().hour(), min));
-            else
-            {
-                current = QTime::currentTime().hour()+1;
-                if((current <= hour.finish)||(hour.type == ANY))
-                    result.setTime(QTime(current, min));
-                else result.setTime(QTime(date.time().hour(), min));
-            }
-            result.setDate(date.date());
-            break;
-        }
-        case HOURS:
-        {
-            int current = QTime::currentTime().hour();
-            int ho = calcSumma(dateMean.startVal.first(), dateMean.finish, current, dateMean.step);
-            if(ho >= current)
-            {
-                result.setTime(QTime(ho, date.time().minute()));
-                result.setDate(date.date());
+                //символ "*/step", где step - интервал
+                int step = cronJob.section("/", 1, 1).toInt();
+                if(step >= minLimit && step<maxLimit)
+                    for(int i=0; i<=maxLimit; i = i+step)
+                    {
+                        if(((maxLimit == DAYS_OF_MONTH) && i != 0)||
+                           ((maxLimit == DAYS_OF_WEEK) && i != 0)||
+                           ((maxLimit == MONTHS) && i != 0))
+                        res.append(i);
+                    }
             }
             else
             {
-                current = QDate::currentDate().day()+1;
-                if((current <= dayOfMonth.finish)||(dayOfMonth.type == ANY))
+                //символ "*"
+                res.append(-1);
+            }
+         }
+         else if(cronJob.contains("-"))
+            {
+                if(cronJob.contains("/"))
                 {
-                    result.setTime(QTime(ho, date.time().minute()));
-                    result.setDate(QDate(date.date().year(), date.date().month(), current));
+                    QString tmp = cronJob.section("-", 1, 1);
+                    tmp = tmp.section("/", 0, 0);
+                    int finish = tmp.toInt();
+                    tmp.clear();
+
+                    tmp = cronJob.section("-", 0, 0);
+                    int start = tmp.toInt();
+
+                    int step = cronJob.section("/", 1, 1).toInt();
+
+                    for(int i=start; i<=finish; i+=step)
+                        //значения типа start-finish/step
+                        res.append(i);
                 }
                 else
                 {
-                    result.setTime(QTime(ho, date.time().minute()));
-                    result.setDate(date.date());
+                    int start = cronJob.section("-", 0, 0).toInt();
+                    int finish = cronJob.section("-", 1, 1).toInt();
+                    if(start >= minLimit && finish <= maxLimit)
+                        for(int j=start; j<=finish; j++)
+                        {
+                            //интервал "start"-"finish"
+                            res.append(j);
+                        }
+                    else res.append(0);
+                }
+            }
+            else if(cronJob.contains(","))
+            {
+                QStringList result;
+                result = cronJob.split(",");
+                //перечень значений через ","
+                for(int j=0; j<result.size(); j++)
+                    if(result.at(j).toInt() >= minLimit && result.at(j).toInt() <= maxLimit)
+                        res.append(result.at(j).toInt());
+                    else res.append(0);
+            }
+            else if(cronJob.contains("/"))
+            {
+                int start = cronJob.section("/", 0, 0).toInt();
+                int step = cronJob.section("/", 1, 1).toInt();
+                if(start >= minLimit && start < maxLimit)
+                    for(int i=start; i<=maxLimit; i=i+step)
+                        //значения типа start/step
+                        res.append(i);
+            }
+            else if((cronJob.toInt() <= maxLimit) && (cronJob.toInt() >= minLimit))
+            {
+                res.append(cronJob.toInt());
+            }
+            else
+            {
+                res.append(0);
+            }
+        return res;
+}
+
+QVector <QDateTime> CronParser::calcDateUnit(QVector<int> time, QVector <QDateTime> nextDate, int limit)
+{
+    QDateTime date;
+    if(nextDate.size()<1)
+        nextDate.append(QDateTime::currentDateTime());
+    QVector <QDateTime> newDate = nextDate;
+
+    switch(limit)
+    {
+        case MINUTES:
+        {
+            int k=0;
+            for(int i=0; i<time.size(); i++)
+            {
+                for(int j=0; j<nextDate.size(); j++)
+                {
+                    if(time.at(i) == -1)
+                    {
+                        QTime temp = nextDate.at(j).time();
+                        date.setDate(nextDate.at(j).date());
+                        date.setTime(QTime(temp.hour(), QTime::currentTime().minute()));
+                    }
+                    else
+                    {
+                        int m = nextDate.at(j).time().minute();
+                        if(m<time.at(i))
+                            date = nextDate.at(j).addSecs(60*std::abs(time.at(i)-m));
+                        else
+                        {
+                            QTime temp = nextDate.at(j).time();
+                            date.setTime(QTime(temp.hour(), time.at(i)));
+                            date.setDate(nextDate.at(j).date());
+                        }
+                    }
+                    if(k>=nextDate.size())
+                        newDate.append(date);
+                    else
+                    {
+                        newDate.remove(j);
+                        newDate.insert(j, date);
+                    }
+                    k++;
+                }
+            }
+            break;
+        }
+        case HOURS:
+        {
+            int k=0;
+            for(int i=0; i<time.size(); i++)
+            {
+                for(int j=0; j<nextDate.size(); j++)
+                {
+                    if(time.at(i) == -1)
+                    {
+                        QTime temp = nextDate.at(j).time();
+                        date.setDate(nextDate.at(j).date());
+                        date.setTime(QTime(QTime::currentTime().hour(), temp.minute()));
+                    }
+                    else
+                    {
+                        int h = nextDate.at(j).time().hour();
+                        if(h<=time.at(i))
+                            date = nextDate.at(j).addSecs(3600*std::abs(time.at(i)-h));
+                        else
+                        {
+                            QTime temp = nextDate.at(j).time();
+                            date.setTime(QTime(time.at(i), temp.minute(), temp.second(), temp.msec()));
+                            date.setDate(nextDate.at(j).date());
+                        }
+                    }
+                    if(k>=nextDate.size())
+                        newDate.append(date);
+                    else
+                    {
+                        newDate.remove(j);
+                        newDate.insert(j, date);
+                    }
+                    k++;
                 }
             }
             break;
         }
         case DAYS_OF_MONTH:
         {
-            int current = QDate::currentDate().day();
-            int dom = calcSumma(dateMean.startVal.first(), dateMean.finish, current, dateMean.step);
-            if(dom >= current)
-                result.setDate(QDate(date.date().year(), date.date().month(), dom));
-            else
+            int k=0;
+            for(int i=0; i<time.size(); i++)
             {
-                current = QDate::currentDate().month()+1;
-                if((current <= month.finish)||(month.type == ANY))
-                    result.setDate(QDate(date.date().year(), current, dom));
-                else
-                    result.setDate(QDate(date.date().year(), date.date().month(), dom));
+                for(int j=0; j<nextDate.size(); j++)
+                {
+                    if(time.at(i) == -1)
+                    {
+                        date.setTime(nextDate.at(j).time());
+                        QDate temp = nextDate.at(j).date();
+                        date.setDate(QDate(temp.year(), temp.month(), QDate::currentDate().day()));
+                    }
+                    else
+                    {
+                        int m = nextDate.at(j).date().day();
+                        if(m<time.at(i))
+                            date = nextDate.at(j).addDays(std::abs(time.at(i)-m));
+                        else
+                        {
+                            QDate temp = nextDate.at(j).date();
+                            date.setDate(QDate(temp.year(), temp.month(), time.at(i)));
+                            date.setTime(nextDate.at(j).time());
+                        }
+                    }
+                    if(k>=nextDate.size())
+                        newDate.append(date);
+                    else
+                    {
+                        newDate.remove(j);
+                        newDate.insert(j, date);
+                    }
+                    k++;
+                }
             }
-            result.setTime(date.time());
             break;
         }
         case MONTHS:
         {
-            int current = QDate::currentDate().month();
-            int mo = calcSumma(dateMean.startVal.first(), dateMean.finish, current, dateMean.step);
-            if(mo >= current)
-                result.setDate(QDate(date.date().year(), mo, date.date().day()));
-            else
+            int k=0;
+            for(int i=0; i<time.size(); i++)
             {
-                current = QDate::currentDate().year()+1;
-                result.setDate(QDate(current, mo, date.date().day()));
+                for(int j=0; j<nextDate.size(); j++)
+                {
+                    if(time.at(i) == -1)
+                    {
+                        date.setTime(nextDate.at(j).time());
+                        QDate temp = nextDate.at(j).date();
+                        date.setDate(QDate(temp.year(), QDate::currentDate().month(), temp.day()));
+                    }
+                    else
+                    {
+                        int m = nextDate.at(j).date().month();
+                        if(m<time.at(i))
+                            date = nextDate.at(j).addMonths(std::abs(time.at(i)-m));
+                        else
+                        {
+                            QDate temp = nextDate.at(j).date();
+                            date.setDate(QDate(temp.year(), time.at(i), temp.day()));
+                            date.setTime(nextDate.at(j).time());
+                        }
+                    }
+                    if(k>=nextDate.size())
+                        newDate.append(date);
+                    else
+                    {
+                        newDate.remove(j);
+                        newDate.insert(j, date);
+                    }
+                    k++;
+                }
             }
-            result.setTime(date.time());
             break;
         }
         case DAYS_OF_WEEK:
         {
-            int current = QDate::currentDate().dayOfWeek();
-            int dow = calcSumma(dateMean.startVal.first(), dateMean.finish, current, dateMean.step);
-
-            //??????????????
+            int k=0;
+            for(int i=0; i<time.size(); i++)
+            {
+                for(int j=0; j<nextDate.size(); j++)
+                {
+                    if(time.at(i) == -1)
+                    {
+                        date.setTime(nextDate.at(j).time());
+                        QDate temp = nextDate.at(j).date();
+                        date.setDate(QDate(temp.year(), temp.month(), QDate::currentDate().day()));
+                    }
+                    else
+                    {
+                        int d = nextDate.at(j).date().dayOfWeek();
+                        if(d<time.at(i))
+                            date = nextDate.at(j).addDays(std::abs(time.at(i)-d));
+                        else
+                        {
+                            d = 7 - d + time.at(i);
+                            date = nextDate.at(j).addDays(d);
+                        }
+                    }
+                    if(k>=nextDate.size())
+                        newDate.append(date);
+                    else
+                    {
+                        newDate.remove(j);
+                        newDate.insert(j, date);
+                    }
+                    k++;
+                }
+            }
             break;
         }
     }
-    return result;
+    return newDate;
 }
 
-QDateTime CronParser::enumDateTime(int dateType, ValueProperties dateMean, QDateTime date)
+QDateTime CronParser::chooseReactionDate(QVector<QDateTime> dateList)
 {
-    switch(dateType)
+    QDateTime current = QDateTime::currentDateTime();
+    QVector<QDateTime> temp;
+    for(int i=0; i<dateList.size(); i++)
     {
-        case MINUTES:
-        {
-            int current = QTime::currentTime().minute();
-            int min = chooseValue(current, dateMean.startVal);
-            break;
-        }
-        case HOURS:
-        {
-            break;
-        }
-        case DAYS_OF_MONTH:
-        {
-            break;
-        }
-        case MONTHS:
-        {
-            break;
-        }
-        case DAYS_OF_WEEK:
-        {
-            break;
-        }
+        if(dateList.at(i)>=current)
+            temp.append(dateList.at(i));
     }
-}
-
-int CronParser::calcSumma(int start, int finish, int current, int step)
-{
-    int i = start + step;
-    if(step == 0)step++;
-    while((i < current) && (i != finish))
-        i += step;
-    if(i < finish) return i;
-    else if((i == finish) && current == finish)return finish;
-    else return start;
-}
-
-int CronParser::chooseValue(int current, QVector<int> value)
-{
-    int i=0;
-    while((current>value.at(i))&&(i < value.size()))
+    if(temp.empty())temp = dateList;
+    QDateTime min = temp.at(0);
+    for(int i=0; i<temp.size(); i++)
     {
-        i++;
+        if(temp.at(i) <= min)
+            min = temp.at(i);
     }
-    if(i != value.size()) return value.at(i);
-    else return value.at(0);
+    return min;
 }
 
 CronParser::~CronParser()

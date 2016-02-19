@@ -4,29 +4,19 @@
 //пустой конструктор
 MyScheduller::MyScheduller(QObject *parent) : QObject(parent)
 {
-    std::cout << "[Scheduller]: Starting...\n";
+
 }
 
 //конструктор, принимающий одно задание
 MyScheduller::MyScheduller(TaskPair oneTask, QObject *parent) : QObject(parent)
 {
-    std::cout << "[Scheduller]: Starting...\n";
     append(oneTask);
 }
 
 //конструктор, принимающий перечень заданий
 MyScheduller::MyScheduller(TaskVector taskVector, QObject *parent) : QObject(parent)
 {
-    std::cout << "[Scheduller]: Starting...\n";
-    //timeCounter = new QTimer();
-    appendNewTask(taskVector);
-
-    /*qDebug() << "Starting MyScheduller...";
-    for(int i=0; i<taskVector.length(); i++)
-        addNewTask(taskVector.at(i), nextTasks);
-    timeCounter.start(1000);              //забить в QSettings
-    connect(&timeCounter, SIGNAL(timeout()), this, SLOT(slotStartTask()));*/
-    //connect(this, SIGNAL(updateTasks(TaskVector)), this, SLOT(slotUpdateTasks(TaskVector)));
+    append(taskVector);
 }
 
 //добавить новое задание в список
@@ -40,443 +30,21 @@ void MyScheduller::append(TaskPair oneTask)
 void MyScheduller::append(TaskVector taskVector)
 {
     taskVect = taskVector;
-    append(taskVector);
+    for(int i=0; i<taskVect.size(); i++)
+        appendNewTask(taskVect.at(i));
 }
 
 //расчет вектора срабатывания для одного задания
 void MyScheduller::appendNewTask(TaskPair oneTask)
-{
-    //std::cout << "[Scheduller]: adding new task: ";
-    //std::cout << oneTask.first.toStdString() << " " << oneTask.second.toStdString() << "\n";
-    //QDateTime dates = calcNewDatetime(oneTask.first);  //получение массива дат для следующего срабатывания
-    QDateTime date = parser.getDateTime(oneTask.first, oneTask.second);
+{   
+    QDateTime date = parser.getDateTime(oneTask.first);
+
+    std::cout << "[Scheduller]: adding new task: ";
+    std::cout << date.toString("dd.MM.yy hh:mm").toStdString() << " " << oneTask.second.toStdString() << "\n";
+
     TaskTime pair(date, oneTask);
     nextTasks.append(pair);                             //добавление дат срабатывания для задания к вектору срабатывания
-
 }
-
-//расчет вектора срабатывания для перечня заданий
-void MyScheduller::appendNewTask(TaskVector taskVector)
-{
-    //std::cout << "[Scheduller]: is vector of tasks:\n";
-    for(int i=0; i<taskVector.size(); i++)
-        append(taskVector.at(i));
-    //TaskTime time = nextTasks.at(2);
-    //remove(time);
-}
-
-//метод рассчитывает даты срабатывания по cron-выражению
-/*QDateTime MyScheduller::calcNewDatetime(QString cronjob)
-{
-    QDateTime date = QDateTime::currentDateTime();
-    QDateTime tmp;
-    QStringList crons = cronjob.split(" ");                         //делим строку на части по пробелам
-    //если количество полученных частей не равно 5, то cron-выражение является ошибочным
-    try
-    {
-        if(crons.size() != 5)
-        {
-            throw crons.size();
-        }
-        else
-        {
-            dayOfWeek = parseCronJob(crons.at(4), DAYS_OF_WEEK);
-            tmp = getDate(DAYS_OF_WEEK, dayOfWeek, date);
-            date = tmp;
-
-            month = parseCronJob(crons.at(3), MONTHS);
-            tmp = getDate(MONTHS, month, date);
-            date = tmp;
-
-            dayOfMonth = parseCronJob(crons.at(2), DAYS_OF_MONTH);
-            tmp = getDate(DAYS_OF_MONTH, dayOfMonth, date);
-            date = tmp;
-
-            hour = parseCronJob(crons.at(1), HOURS);
-            tmp = getDate(HOURS, hour, date);
-            date = tmp;
-
-            minute = parseCronJob(crons.at(0), MINUTES);
-            tmp = getDate(MINUTES, minute, date);
-            date = tmp;
-        }
-    }
-    catch(int)
-    {
-        std::cout << "[Scheduller]: Error: Invalid cronjob \"";
-        std::cout << cronjob.toStdString() << "\"\n";
-    }
-    return date;
-}*/
-
-
-/*
-QDateTime MyScheduller::calcForEnum(int dateType, QVector<int> values, QDateTime date)
-{
-    QDateTime res;
-    switch(dateType)
-    {
-        case MINUTES:
-        {
-            int m = QTime::currentTime().minute();
-            int i=0;
-            while(m > values.at(i)||i!=values.size())
-            {
-                i++;
-            }
-            if(i != values.size())
-            {
-                res.setDate(date.date());
-                res.setTime(QTime(date.time().hour(), values.at(i)));
-            }
-            else
-            {
-                res.setDate(date.date());
-                res.setTime(QTime(date.time().hour(), values.at(0)));
-            }
-            break;
-        }
-        case HOURS:
-        {
-            int h = QTime::currentTime().hour();
-            int i=0;
-            while(h > values.at(i)||i!=values.size())
-            {
-                i++;
-            }
-            if(i != values.size())
-            {
-                res.setDate(date.date());
-                res.setTime(QTime(values.at(i), date.time().minute()));
-            }
-            else
-            {
-                res.setDate(date.date());
-                res.setTime(QTime(values.at(0), date.time().minute()));
-            }
-            break;
-        }
-        case DAYS_OF_MONTH:
-        {
-            int d = QDate::currentDate().day();
-            int i=0;
-            while(d > values.at(i)||i!=values.size())
-            {
-                i++;
-            }
-            if(i != values.size())
-            {
-                res.setDate(QDate(date.date().year(), date.date().month(), values.at(i)));
-                res.setTime(date.time());
-            }
-            else
-            {
-                res.setDate(QDate(date.date().year(), date.date().month(), values.at(0)));
-                res.setTime(date.time());
-            }
-            break;
-        }
-        case MONTHS:
-        {
-            int mo = QDate::currentDate().month();
-            int i=0;
-            while(mo > values.at(i)||i!=values.size())
-            {
-                i++;
-            }
-            if(i != values.size())
-            {
-                res.setDate(QDate(date.date().year(), values.at(i), date.date().day()));
-                res.setTime(date.time());
-            }
-            else
-            {
-                res.setDate(QDate(date.date().year(), values.at(0), date.date().day()));
-                res.setTime(date.time());
-            }
-            break;
-        }
-        case DAYS_OF_WEEK:
-        {
-            int dw = QDate::currentDate().dayOfWeek();
-            int i=0;
-            while(dw > values.at(i)||i!=values.size())
-            {
-                i++;
-            }
-            if(i != values.size())
-            {
-                if(dw < values.at(i))
-                {
-                    res = date.addDays(values.at(i)-dw);
-                }
-                else
-                {
-                    dw = DAYS_OF_WEEK - dw + values.at(i);
-                    res = date.addDays(dw);
-                }
-            }
-            else
-            {
-                if(dw < values.at(0))
-                {
-                    res = date.addDays(values.at(0)-dw);
-                }
-                else
-                {
-                    dw = DAYS_OF_WEEK - dw + values.at(0);
-                    res = date.addDays(dw);
-                }
-            }
-            break;
-        }
-
-    }
-    return res;
-}*/
-
-//вычисление даты следующего срабатывания выражения
-/*QVector<QDateTime> MyScheduller::getNextDate()
-{
-    QVector <QDateTime> nextDate;
-
-    QVector <QDateTime> tmp;
-
-    tmp = calcTimeUnit(minute, nextDate, MINUTES);
-    nextDate = tmp;
-    tmp.clear();
-
-    tmp = calcTimeUnit(hour, nextDate, HOURS);
-    nextDate.clear();
-    nextDate = tmp;
-    tmp.clear();
-
-    tmp = calcTimeUnit(dayOfMonth, nextDate, DAYS_OF_MONTH);
-    nextDate.clear();
-    nextDate = tmp;
-    tmp.clear();
-
-    tmp = calcTimeUnit(month, nextDate, MONTHS);
-    nextDate.clear();
-    nextDate = tmp;
-    tmp.clear();
-
-    tmp = calcTimeUnit(dayOfWeek, nextDate, DAYS_OF_WEEK);
-    nextDate.clear();
-    nextDate = tmp;
-    tmp.clear();
-
-    return nextDate;
-}*/
-
-//Функция возвращает вычисленную часть даты, поступившую на вход
-/*QDateTime MyScheduller::calcTimeUnit(int dateType, int dateMean, QDateTime date)
-{
-    QDateTime res = date;
-    switch(dateType)
-    {
-    //step д/б <60 и >=0
-    case MINUTES:
-        {
-            int sum = date.time().minute();
-            sum += dateMean;
-            if(sum > dateType)
-            {
-                sum -= dateType;
-                res.setTime(QTime((date.time().hour()+1), sum, date.time().second(), date.time().msec()));
-            }
-            else
-            {
-                res.setTime(QTime(date.time().hour(), sum, date.time().second(), date.time().msec()));
-            }
-        }
-    }
-    //QDateTime date;
-    /*if(nextDate.size()<1)
-        nextDate.append(QDateTime::currentDateTime());
-    QVector <QDateTime> newDate = nextDate;
-
-    switch(limit)
-    {
-        case MINUTES:
-        {
-            int k=0;
-            for(int i=0; i<time.size(); i++)
-            {
-                for(int j=0; j<nextDate.size(); j++)
-                {
-                    if(time.at(i) == -1)
-                        date = nextDate.at(j);
-                    else
-                    {
-                        int m = nextDate.at(j).time().minute();
-                        if(m<time.at(i))
-                            date = nextDate.at(j).addSecs(60*std::abs(time.at(i)-m));
-                        else
-                        {
-                            QTime temp = nextDate.at(j).time();
-                            date.setTime(QTime(temp.hour(), time.at(i), temp.second(), temp.msec()));
-                            date.setDate(nextDate.at(j).date());
-                        }
-                    }
-                    if(k>=nextDate.size())
-                        newDate.append(date);
-                    else
-                    {
-                        newDate.remove(j);
-                        newDate.insert(j, date);
-                    }
-                    k++;
-                }
-            }
-            break;
-        }
-        case HOURS:
-        {
-            int k=0;
-            for(int i=0; i<time.size(); i++)
-            {
-                for(int j=0; j<nextDate.size(); j++)
-                {
-                    if(time.at(i) == -1)
-                        date = nextDate.at(j);
-                    else
-                    {
-                        int h = nextDate.at(j).time().hour();
-                        if(h<=time.at(i))
-                            date = nextDate.at(j).addSecs(3600*std::abs(time.at(i)-h));
-                        else
-                        {
-                            QTime temp = nextDate.at(j).time();
-                            date.setTime(QTime(time.at(i), temp.minute(), temp.second(), temp.msec()));
-                            date.setDate(nextDate.at(j).date());
-                        }
-                    }
-                    if(k>=nextDate.size())
-                        newDate.append(date);
-                    else
-                    {
-                        newDate.remove(j);
-                        newDate.insert(j, date);
-                    }
-                    k++;
-                }
-            }
-            break;
-        }
-        case DAYS_OF_MONTH:
-        {
-            int k=0;
-            for(int i=0; i<time.size(); i++)
-            {
-                for(int j=0; j<nextDate.size(); j++)
-                {
-                    if(time.at(i) == -1)
-                        date = nextDate.at(j);
-                    else
-                    {
-                        int m = nextDate.at(j).date().day();
-                        if(m<time.at(i))
-                            date = nextDate.at(j).addDays(std::abs(time.at(i)-m));
-                        else
-                        {
-                            if(time.at(i)!=0)
-                            {
-                                QDate temp = nextDate.at(j).date();
-                                date.setDate(QDate(temp.year(), temp.month(), time.at(i)));
-                                date.setTime(nextDate.at(j).time());
-                            }
-                            else date = nextDate.at(j);
-                        }
-                    }
-                    if(k>=nextDate.size())
-                        newDate.append(date);
-                    else
-                    {
-                        newDate.remove(j);
-                        newDate.insert(j, date);
-                    }
-                    k++;
-                }
-            }
-            break;
-        }
-        case MONTHS:
-        {
-            int k=0;
-            for(int i=0; i<time.size(); i++)
-            {
-                for(int j=0; j<nextDate.size(); j++)
-                {
-                    if(time.at(i) == -1)
-                        date = nextDate.at(j);
-                    else
-                    {
-                        int m = nextDate.at(j).date().month();
-                        if(m<time.at(i))
-                            date = nextDate.at(j).addMonths(std::abs(time.at(i)-m));
-                        else
-                        {
-                            if(time.at(i)!=0)
-                            {
-                                QDate temp = nextDate.at(j).date();
-                                date.setDate(QDate(temp.year(), time.at(i), temp.day()));
-                                date.setTime(nextDate.at(j).time());
-                            }
-                            else date = nextDate.at(j);
-                        }
-                    }
-                    if(k>=nextDate.size())
-                        newDate.append(date);
-                    else
-                    {
-                        newDate.remove(j);
-                        newDate.insert(j, date);
-                    }
-                    k++;
-                }
-            }
-            break;
-        }
-        case DAYS_OF_WEEK:
-        {
-            int k=0;
-            for(int i=0; i<time.size(); i++)
-            {
-                for(int j=0; j<nextDate.size(); j++)
-                {
-                    if(time.at(i) == -1)
-                        date = nextDate.at(j);
-                    else
-                    {
-                        int d = nextDate.at(j).date().dayOfWeek();
-                        if(d<time.at(i))
-                            date = nextDate.at(j).addDays(std::abs(time.at(i)-d));
-                        else
-                        {
-                            if(time.at(i)!=0)
-                            {
-                                d = 7 - d + time.at(i);
-                                date = nextDate.at(j).addDays(d);
-                            }
-                            else date = nextDate.at(j);
-                        }
-                    }
-                    if(k>=nextDate.size())
-                        newDate.append(date);
-                    else
-                    {
-                        newDate.remove(j);
-                        newDate.insert(j, date);
-                    }
-                    k++;
-                }
-            }
-            break;
-        }
-    }
-    return date;
-}*/
 
 //удалить одно задание из списка
 void MyScheduller::removeOne(TaskTime task)
@@ -501,22 +69,22 @@ void MyScheduller::clear()
 }
 
 //метод подсчитывает время до следующего срабатывания таймера в миллисекундах
+//ДОДУМАТЬ!!!
 int MyScheduller::calcTimeout(TaskTime oneTask)
 {
-    int msec;
-    QDateTime curDate = QDateTime::currentDateTime();
-    QDateTime taskDate = oneTask.first;
-    msec = (taskDate.toTime_t() - curDate.toTime_t())*1000;
-    if(msec > INT_MAX||msec < 0)
-    {
-        return -1;
-    }
-    return msec;
+    //int msec = (QDateTime::currentDateTime().toTime_t() - oneTask.first.toTime_t())*100;
+    int msec = (QDateTime::currentDateTime().toTime_t() - oneTask.first.toTime_t())*100;
+    //qDebug() << int(QDateTime::currentDateTime().toTime_t());
+    qDebug() << msec/(1000*60);
+    qDebug() << msec;
+    if(msec <= INT_MAX)
+        return msec;
 }
 
 //метод запускает планировщик
 void MyScheduller::startSheduller()
 {
+    std::cout << "[Scheduller]: Starting...\n";
     timer = new Timer[nextTasks.size()];
     for(int i=0; i<nextTasks.size(); i++)
     {
@@ -544,11 +112,10 @@ void MyScheduller::slotReaction(int ind)
           (curDate.time().minute() == nextTasks.at(i).first.time().minute())&&
           (curDate.time().hour() == nextTasks.at(i).first.time().hour()))
         {
-            qDebug() << "[Scheduller " << nextTasks.at(i).first.toString("dd/MM/yy hh:mm:ss") << "]:    " << "Call " << nextTasks.at(i).second.second;
+            qDebug() << "[Scheduller" << nextTasks.at(i).first.toString("dd/MM/yy hh:mm") << "]:    " << "Call " << nextTasks.at(i).second.second;
             emit timeOut(nextTasks.at(i).second.second);
         }
     }
-    qDebug() << taskVect.size();
 }
 
 //метод рассчитывает новое время срабатывания для заданий
@@ -563,6 +130,6 @@ void MyScheduller::slotUpdateTasks(int index)
 //деструктор
 MyScheduller::~MyScheduller()
 {
-
+    delete timer;
 }
 

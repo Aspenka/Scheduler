@@ -16,10 +16,6 @@
 #define TaskTime        QPair<QDateTime, QPair<QString, QString>>   //задание, содержащее в себе время срабатывания и имя задания
 #define TaskTimeVector  QVector<QPair<QDateTime, QPair<QString, QString>>>  //вектор заданий, содержащих в себе время срабатывания и имя задания
 
-
-
-
-
 //класс предназначен для вызова определенных процедур в указанное время, представленное в виде cron-выражения
 class MyScheduller : public QObject
 {
@@ -31,32 +27,8 @@ private:
     Timer *timer;
     CronParser parser;
 
-    /*QVector <int>   minute,     //значение минут
-                    hour,       //значение часов
-                    dayOfMonth, //значение дней месяца
-                    month,      //значение месяца
-                    dayOfWeek;  //значение дня недели*/
-
-
-
     void appendNewTask(TaskPair oneTask);          //метод рассчитывает вектор срабатывания одного задания
-    void appendNewTask(TaskVector taskVector);     //метод рассчитывает вектор срабатывания для перечня заданий
 
-
-    QDateTime calcNewDatetime(QString cronjob);//метод рассчитывает даты срабатывания по cron-выражению
-    //QDateTime getDate(int dateType, valueProperties dateMean, QDateTime date);
-
-    QDateTime calcForAny(int dateType, QDateTime date);
-    QDateTime calcForAny(int dateType, int step, QDateTime date);
-    QDateTime calcForInterval(int dateType, int start, int finish, QDateTime date);
-    QDateTime calcForInterval(int dateType, int start, int finish, int step, QDateTime date);
-    QDateTime calcForEnum(int dateType, QVector<int> values, QDateTime date);
-    QDateTime calcForValue(int dateType, int start, int step, QDateTime date);
-    QDateTime calcForValue(int dateType, int value, QDateTime date);
-   // QVector <QDateTime> getNextDate();   //расчет новой даты срабатывания
-    //QVector<QDateTime> calcTimeUnit(QVector <int> time, QVector<QDateTime> nextDate, int limit);    //вычисление нового срабатывания
-                                                                                                    //в зависимости от единицы времени
-    //QDateTime calcTimeUnit(int dateType, int dateMean, QDateTime date);
     void removeOne(TaskTime task);  //удалить задание
     int calcTimeout(TaskTime oneTask);   //высчитать время срабатывания для одного задания
 
