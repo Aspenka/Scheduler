@@ -2,22 +2,40 @@
 #define TIMER_H
 
 #include <QTimer>
+#include <QObject>
+#include <QPair>
+#include <QString>
+#include <QObject>
+#include <mutex>
+#include "CronParser.h"
 
-class Timer : public QTimer
+#define TaskPair        QPair <QString, QString>
+
+class Timer : public QObject//public QTimer
 {
     Q_OBJECT
 private:
-    int index;
-public:
-    Timer();
-    ~Timer();
+    CronParser parser;      //обработчик cron-выражений
+    QString cronJob;        //cron-выражение
+    QString taskName;       //имя таска
+    int timerId = 0;        //время срабатывания таймера
+    bool singShot = false;  //синглшот
+    time_t nextExec = -1;   //время следующего срабатывания
+    std::mutex mtxNextExec; //мьтекс для корректного срабатывания таймера
 
-    void setIndex(int ind);
-    int getIndex();
+    void timerEvent(QTimerEvent *event) override;    //обработка событий таймера
+    time_t calcDiffTime();  //подсчет разницы времени
+public:
+    explicit Timer(QObject *parent = 0); //конструктор
+    Timer(TaskPair pair, QObject *parent = 0); //конструктор с параметром
+    ~Timer();   //деструктор
+
+    void setSingleShot(bool singleShot);    //метод станавливает переменную singShot в нужное состояние
 signals:
-    sentIndex(int);
+    void timeout(TaskPair);  //сигнал о том, что время таймера истекло
 public slots:
-    void sentTimerIndex();
+    void start(TaskPair pair);     //запуск таймера
+    void stop();                   //остановка таймера
 };
 
 #endif // TIMER_H

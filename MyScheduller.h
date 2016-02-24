@@ -13,8 +13,6 @@
 
 #define TaskPair        QPair <QString, QString>    //один экземпляр задания, имеющего формат {"cron-выражение", "имя задания"}
 #define TaskVector      QVector<QPair <QString, QString>>           //вектор заданий формата TaskPair
-#define TaskTime        QPair<QDateTime, QPair<QString, QString>>   //задание, содержащее в себе время срабатывания и имя задания
-#define TaskTimeVector  QVector<QPair<QDateTime, QPair<QString, QString>>>  //вектор заданий, содержащих в себе время срабатывания и имя задания
 
 //класс предназначен для вызова определенных процедур в указанное время, представленное в виде cron-выражения
 class MyScheduller : public QObject
@@ -23,14 +21,8 @@ class MyScheduller : public QObject
 private:
     TaskPair task;
     TaskVector taskVect;        //перечень заданий
-    TaskTimeVector nextTasks;   //вектор срабатываний, содержащий задание и время, в которое оно должно сработать
     Timer *timer;
     CronParser parser;
-
-    void appendNewTask(TaskPair oneTask);          //метод рассчитывает вектор срабатывания одного задания
-
-    void removeOne(TaskTime task);  //удалить задание
-    double calcTimeout(TaskTime oneTask);   //высчитать время срабатывания для одного задания
 
 public:
     explicit MyScheduller(QObject *parent = 0);  //пустой конструктор
@@ -45,21 +37,11 @@ public:
     void remove(int index);
 
     void clear();   //очистить очередь заданий
-
-
-
 signals:
-    void timeOut(QString taskName);      //сигнал о начале выполнения нового задания
-    void updateTasks();
+    void callTask(QString taskName);     //сигнал о начале выполнения нового задания
 public slots:
-    void slotUpdateTasks();
-
-    void startSheduller();
-    void slotReaction(int ind);
-    //void start(TaskPair oneTask);
-    //void start(TaskVector taskVector);
-
-    //void stop();
+    void start();
+    void slotReaction(TaskPair task);
 };
 
 #endif // MYSCHEDULLER_H

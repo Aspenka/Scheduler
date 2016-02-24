@@ -84,7 +84,7 @@ QVector<int> CronParser::parse(QString cronJob, int minLimit, int maxLimit)
             {
                 //символ "*/step", где step - интервал
                 int step = cronJob.section("/", 1, 1).toInt();
-                if(step >= minLimit && step<maxLimit)
+                if(step >= minLimit && step<=maxLimit)
                     for(int i=0; i<=maxLimit; i = i+step)
                     {
                         if(((maxLimit == DAYS_OF_MONTH) && i != 0)||
@@ -146,7 +146,7 @@ QVector<int> CronParser::parse(QString cronJob, int minLimit, int maxLimit)
             {
                 int start = cronJob.section("/", 0, 0).toInt();
                 int step = cronJob.section("/", 1, 1).toInt();
-                if(start >= minLimit && start < maxLimit)
+                if(start >= minLimit && start <= maxLimit)
                     for(int i=start; i<=maxLimit; i=i+step)
                         //значения типа start/step
                         res.append(i);
