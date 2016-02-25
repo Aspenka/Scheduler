@@ -21,8 +21,8 @@ class CronParser : public QObject
 {
     Q_OBJECT
 private:
-    QString cronJob;
-    QDateTime cronDate;
+    QString cronJob;            //cron-выражение
+    QDateTime cronDate;         //дата срабатывания
     QVector <int>   minute,     //значение минут
                     hour,       //значение часов
                     dayOfMonth, //значение дней месяца

@@ -11,12 +11,6 @@ Timer::Timer(QObject *parent) : QObject(parent)
 
 }
 
-Timer::Timer(TaskPair pair, QObject *parent) : QObject(parent)
-{
-    cronJob = pair.first;
-    taskName = pair.second;
-}
-
 void Timer::setSingleShot(bool singleShot)
 {
     singShot = singleShot;

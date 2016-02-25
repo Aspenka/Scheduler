@@ -22,7 +22,6 @@ private:
     TaskPair task;
     TaskVector taskVect;        //перечень заданий
     Timer *timer;
-    CronParser parser;
 
 public:
     explicit MyScheduller(QObject *parent = 0);  //пустой конструктор

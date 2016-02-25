@@ -27,7 +27,6 @@ private:
     time_t calcDiffTime();  //подсчет разницы времени
 public:
     explicit Timer(QObject *parent = 0); //конструктор
-    Timer(TaskPair pair, QObject *parent = 0); //конструктор с параметром
     ~Timer();   //деструктор
 
     void setSingleShot(bool singleShot);    //метод станавливает переменную singShot в нужное состояние
