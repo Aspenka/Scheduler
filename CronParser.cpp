@@ -194,6 +194,7 @@ QVector <QDateTime> CronParser::calcDateUnit(QVector<int> time, QVector <QDateTi
                             QTime temp = nextDate.at(j).time();
                             date.setTime(QTime(temp.hour(), time.at(i)));
                             date.setDate(nextDate.at(j).date());
+                            //date = nextDate.at(j)
                         }
                     }
                     if(k>=nextDate.size())
