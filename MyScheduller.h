@@ -2,7 +2,6 @@
 #define MYSCHEDULLER_H
 
 #include <QObject>
-//#include <QTimer>
 #include <QVector>
 #include <QPair>
 #include <QDateTime>

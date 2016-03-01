@@ -40,7 +40,7 @@ void Timer::timerEvent(QTimerEvent *event)
     std::lock_guard<std::mutex> lock(mtxNextExec);
     killTimer(timerId);
     timerId = 0;
-    if(nextExec > time(nullptr))
+    if(nextExec > QDateTime::currentDateTime().toTime_t())
     {
         timerId = startTimer(calcDiffTime());
         assert(timerId);

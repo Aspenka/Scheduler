@@ -98,7 +98,8 @@ QVector<int> CronParser::parse(QString cronJob, int minLimit, int maxLimit)
             else
             {
                 //символ "*"
-                res.append(-1);
+                for(int i=minLimit; i<=maxLimit; i++)
+                    res.append(i);
             }
          }
          else if(cronJob.contains("-"))
@@ -178,24 +179,14 @@ QVector <QDateTime> CronParser::calcDateUnit(QVector<int> time, QVector <QDateTi
             {
                 for(int j=0; j<nextDate.size(); j++)
                 {
-                    if(time.at(i) == -1)
-                    {
-                        QTime temp = nextDate.at(j).time();
-                        date.setDate(nextDate.at(j).date());
-                        date.setTime(QTime(temp.hour(), QTime::currentTime().minute()));
-                    }
+                    int m = nextDate.at(j).time().minute();
+                    if(m<time.at(i))
+                        date = nextDate.at(j).addSecs(60*std::abs(time.at(i)-m));
                     else
                     {
-                        int m = nextDate.at(j).time().minute();
-                        if(m<time.at(i))
-                            date = nextDate.at(j).addSecs(60*std::abs(time.at(i)-m));
-                        else
-                        {
-                            QTime temp = nextDate.at(j).time();
-                            date.setTime(QTime(temp.hour(), time.at(i)));
-                            date.setDate(nextDate.at(j).date());
-                            //date = nextDate.at(j)
-                        }
+                        QTime temp = nextDate.at(j).time();
+                        date.setTime(QTime(temp.hour(), time.at(i)));
+                        date.setDate(nextDate.at(j).date());
                     }
                     if(k>=nextDate.size())
                         newDate.append(date);
@@ -216,23 +207,14 @@ QVector <QDateTime> CronParser::calcDateUnit(QVector<int> time, QVector <QDateTi
             {
                 for(int j=0; j<nextDate.size(); j++)
                 {
-                    if(time.at(i) == -1)
-                    {
-                        QTime temp = nextDate.at(j).time();
-                        date.setDate(nextDate.at(j).date());
-                        date.setTime(QTime(QTime::currentTime().hour(), temp.minute()));
-                    }
+                    int h = nextDate.at(j).time().hour();
+                    if(h<time.at(i))
+                        date = nextDate.at(j).addSecs(3600*std::abs(time.at(i)-h));
                     else
                     {
-                        int h = nextDate.at(j).time().hour();
-                        if(h<=time.at(i))
-                            date = nextDate.at(j).addSecs(3600*std::abs(time.at(i)-h));
-                        else
-                        {
-                            QTime temp = nextDate.at(j).time();
-                            date.setTime(QTime(time.at(i), temp.minute(), temp.second(), temp.msec()));
-                            date.setDate(nextDate.at(j).date());
-                        }
+                        QTime temp = nextDate.at(j).time();
+                        date.setTime(QTime(time.at(i), temp.minute()));
+                        date.setDate(nextDate.at(j).date());
                     }
                     if(k>=nextDate.size())
                         newDate.append(date);
@@ -253,23 +235,14 @@ QVector <QDateTime> CronParser::calcDateUnit(QVector<int> time, QVector <QDateTi
             {
                 for(int j=0; j<nextDate.size(); j++)
                 {
-                    if(time.at(i) == -1)
-                    {
-                        date.setTime(nextDate.at(j).time());
-                        QDate temp = nextDate.at(j).date();
-                        date.setDate(QDate(temp.year(), temp.month(), QDate::currentDate().day()));
-                    }
+                    int m = nextDate.at(j).date().day();
+                    if(m<time.at(i))
+                        date = nextDate.at(j).addDays(std::abs(time.at(i)-m));
                     else
                     {
-                        int m = nextDate.at(j).date().day();
-                        if(m<time.at(i))
-                            date = nextDate.at(j).addDays(std::abs(time.at(i)-m));
-                        else
-                        {
-                            QDate temp = nextDate.at(j).date();
-                            date.setDate(QDate(temp.year(), temp.month(), time.at(i)));
-                            date.setTime(nextDate.at(j).time());
-                        }
+                        QDate temp = nextDate.at(j).date();
+                        date.setDate(QDate(temp.year(), temp.month(), time.at(i)));
+                        date.setTime(nextDate.at(j).time());
                     }
                     if(k>=nextDate.size())
                         newDate.append(date);
@@ -290,23 +263,15 @@ QVector <QDateTime> CronParser::calcDateUnit(QVector<int> time, QVector <QDateTi
             {
                 for(int j=0; j<nextDate.size(); j++)
                 {
-                    if(time.at(i) == -1)
-                    {
-                        date.setTime(nextDate.at(j).time());
-                        QDate temp = nextDate.at(j).date();
-                        date.setDate(QDate(temp.year(), QDate::currentDate().month(), temp.day()));
-                    }
+
+                    int m = nextDate.at(j).date().month();
+                    if(m<time.at(i))
+                        date = nextDate.at(j).addMonths(std::abs(time.at(i)-m));
                     else
                     {
-                        int m = nextDate.at(j).date().month();
-                        if(m<time.at(i))
-                            date = nextDate.at(j).addMonths(std::abs(time.at(i)-m));
-                        else
-                        {
-                            QDate temp = nextDate.at(j).date();
-                            date.setDate(QDate(temp.year(), time.at(i), temp.day()));
-                            date.setTime(nextDate.at(j).time());
-                        }
+                        QDate temp = nextDate.at(j).date();
+                        date.setDate(QDate(temp.year(), time.at(i), temp.day()));
+                        date.setTime(nextDate.at(j).time());
                     }
                     if(k>=nextDate.size())
                         newDate.append(date);
@@ -327,22 +292,13 @@ QVector <QDateTime> CronParser::calcDateUnit(QVector<int> time, QVector <QDateTi
             {
                 for(int j=0; j<nextDate.size(); j++)
                 {
-                    if(time.at(i) == -1)
-                    {
-                        date.setTime(nextDate.at(j).time());
-                        QDate temp = nextDate.at(j).date();
-                        date.setDate(QDate(temp.year(), temp.month(), QDate::currentDate().day()));
-                    }
+                    int d = nextDate.at(j).date().dayOfWeek();
+                    if(d<time.at(i))
+                        date = nextDate.at(j).addDays(std::abs(time.at(i)-d));
                     else
                     {
-                        int d = nextDate.at(j).date().dayOfWeek();
-                        if(d<time.at(i))
-                            date = nextDate.at(j).addDays(std::abs(time.at(i)-d));
-                        else
-                        {
-                            d = 7 - d + time.at(i);
-                            date = nextDate.at(j).addDays(d);
-                        }
+                        d = 7 - d + time.at(i);
+                        date = nextDate.at(j).addDays(d);
                     }
                     if(k>=nextDate.size())
                         newDate.append(date);

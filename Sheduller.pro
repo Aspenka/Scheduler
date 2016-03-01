@@ -4,14 +4,13 @@
 #
 #-------------------------------------------------
 
-QT       += core network sql
-
 QT       -= gui
+QT       += testlib
 
-TARGET = Sheduller
+TARGET   = Sheduller
 CONFIG   += console
 CONFIG   -= app_bundle
-CONFIG += c++11
+CONFIG   += c++11
 
 TEMPLATE = app
 
@@ -19,9 +18,11 @@ TEMPLATE = app
 SOURCES += main.cpp \
     MyScheduller.cpp \
     CronParser.cpp \
-    Timer.cpp
+    Timer.cpp \
+    ../tests/test.cpp
 
 HEADERS += \
     MyScheduller.h \
     CronParser.h \
-    Timer.h
+    Timer.h \
+    ../tests/test.h

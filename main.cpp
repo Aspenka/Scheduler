@@ -2,20 +2,34 @@
 #include <QString>
 #include <QPair>
 #include <QVector>
-#include <QDebug>
+#include <QSettings>
 #include "MyScheduller.h"
+
+QVector <QPair<QString, QString>> loadData()
+{
+    QSettings settings("TaskList", QSettings::IniFormat);
+    int size = settings.beginReadArray("TaskList");
+    QVector<QPair<QString, QString>> vector;
+    QPair<QString, QString> pair;
+
+    for(int i=0; i<size; i++)
+    {
+        settings.setArrayIndex(i);
+
+        pair.first = settings.value("cron").toString();
+        pair.second = settings.value("task").toString();
+        vector.append(pair);
+    }
+    settings.endArray();
+    return vector;
+}
 
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
-
-    QPair <QString, QString> pair1("8-15 10-18 * * *", "Task1");
-    QPair <QString, QString> pair2("*/2 * * * *", "Task2");
-    QPair <QString, QString> pair3("2 * * * 3", "Task3");
     QVector <QPair <QString, QString>> vector;
-    vector.append(pair1);
-    vector.append(pair2);
-    vector.append(pair3);
+    vector = loadData();
+
     MyScheduller shed(vector);
     shed.start();
 
