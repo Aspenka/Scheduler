@@ -18,9 +18,9 @@ class MyScheduller : public QObject
 {
     Q_OBJECT
 private:
-    TaskPair task;
+    TaskPair task;              //одно задание
     TaskVector taskVect;        //перечень заданий
-    Timer *timer;
+    Timer *timer;               //таймер
 
 public:
     explicit MyScheduller(QObject *parent = 0);  //пустой конструктор
@@ -31,15 +31,15 @@ public:
     void append(TaskPair oneTask);          //добавить одно задание
     void append(TaskVector taskVector);     //добавить перечень заданий
 
-    void remove(TaskPair oneTask);  //удалить из вектора срабатывания все записи о конкретном задании и его cron-выражении
-    void remove(int index);
+    void remove(TaskPair oneTask);  //метод удаляет из вектора заданий задание, равное oneTask
+    void remove(int index); //метод удаляет из вектора заданий значение с индексом index
 
     void clear();   //очистить очередь заданий
 signals:
     void callTask(QString taskName);     //сигнал о начале выполнения нового задания
 public slots:
-    void start();
-    void slotReaction(TaskPair task);
+    void start();   //метод-слот запускает планировщик
+    void slotReaction(TaskPair task);   //метод-слот, реагируюшщий на срабатывание таймера
 };
 
 #endif // MYSCHEDULLER_H

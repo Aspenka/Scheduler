@@ -6,16 +6,19 @@
 #include <QTimerEvent>
 #include <QDateTime>
 
+//конструктор
 Timer::Timer(QObject *parent) : QObject(parent)
 {
 
 }
 
+//метод устанавливает синглшот
 void Timer::setSingleShot(bool singleShot)
 {
     singShot = singleShot;
 }
 
+//метод запускает таймер
 void Timer::start(TaskPair pair)
 {
     cronJob = pair.first;
@@ -26,6 +29,7 @@ void Timer::start(TaskPair pair)
     assert(timerId);
 }
 
+//меотд останавливает таймер
 void Timer::stop()
 {
     std::lock_guard<std::mutex> lock(mtxNextExec);
@@ -33,6 +37,7 @@ void Timer::stop()
     killTimer(timerId);
 }
 
+//метод обрабатывает события таймера
 void Timer::timerEvent(QTimerEvent *event)
 {
     if(event->timerId() != timerId)
@@ -57,6 +62,7 @@ void Timer::timerEvent(QTimerEvent *event)
     }
 }
 
+//метод вычисляет время ожидания следующего вызова функции
 time_t Timer::calcDiffTime()
 {
     time_t t = QDateTime::currentDateTime().msecsTo(QDateTime::fromTime_t(0).addSecs(nextExec));
@@ -67,6 +73,7 @@ time_t Timer::calcDiffTime()
     return t;
 }
 
+//деструктор
 Timer::~Timer()
 {
 

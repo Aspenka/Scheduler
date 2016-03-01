@@ -5,6 +5,7 @@
 #include <QSettings>
 #include "MyScheduller.h"
 
+//функция загружает из ini-файла перечень заданий и возвращает их в виде вектора
 QVector <QPair<QString, QString>> loadData()
 {
     QSettings settings("TaskList", QSettings::IniFormat);
@@ -24,6 +25,7 @@ QVector <QPair<QString, QString>> loadData()
     return vector;
 }
 
+//главная функция
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);

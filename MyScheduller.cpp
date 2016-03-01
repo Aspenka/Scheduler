@@ -55,7 +55,6 @@ void MyScheduller::start()
     for(int i=0; i<taskVect.size(); i++)
     {
         timer = new Timer();
-        //timer->setSingleShot(true);
         connect(timer, SIGNAL(timeout(QPair<QString,QString>)), this, SLOT(slotReaction(QPair<QString,QString>)));
         timer->start(taskVect.at(i));
     }

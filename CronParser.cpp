@@ -1,18 +1,21 @@
 #include "CronParser.h"
-#include <QDebug>
 #include <iostream>
+#include <QStringList>
 
+//конструктор
 CronParser::CronParser(QObject *parent) : QObject(parent)
 {
     cronJob = "";
     cronDate = QDateTime::currentDateTime();
 }
 
+//метод возвращает cronJob
 QString CronParser::getCronJob()
 {
     return cronJob;
 }
 
+//метод возвращает ближайшую дату вызова функции
 QDateTime CronParser::getDateTime(QString cron)
 {
     cronJob = cron;
@@ -20,6 +23,7 @@ QDateTime CronParser::getDateTime(QString cron)
     return cronDate;
 }
 
+//метод парсит cron-выражение и рассчитывает ближайшую дату вызова функции
 QDateTime CronParser::calcTaskDate()
 {
     QVector<QDateTime> dateList,
@@ -75,94 +79,129 @@ QDateTime CronParser::calcTaskDate()
     return optimalDate;
 }
 
+//метод парсит cron-выражения
 QVector<int> CronParser::parse(QString cronJob, int minLimit, int maxLimit)
 {
     QVector <int> res;
-        if(cronJob.contains("*"))
+    if(cronJob.contains("*"))
+    {
+        int step = 1;
+        //выражение типа */step
+        if(cronJob.contains("/"))
+            step = cronJob.section("/", 1, 1).toInt();
+        try
         {
-            if(cronJob.contains("/"))
-            {
-                //символ "*/step", где step - интервал
-                int step = cronJob.section("/", 1, 1).toInt();
-                if(step >= minLimit && step<=maxLimit)
-                    for(int i=0; i<=maxLimit; i = i+step)
-                    {
-                        if(((maxLimit == DAYS_OF_MONTH) && i != 0)||
-                           ((maxLimit == DAYS_OF_WEEK) && i != 0)||
-                           ((maxLimit == MONTHS) && i != 0))
-                        res.append(i);
-                        else if((maxLimit == HOURS) || (maxLimit == MINUTES))
-                            res.append(i);
-                    }
-            }
+            if(step < minLimit || step > maxLimit)
+                throw step;
             else
             {
-                //символ "*"
-                for(int i=minLimit; i<=maxLimit; i++)
+                for(int i = minLimit; i <= maxLimit; i += step)
                     res.append(i);
             }
-         }
-         else if(cronJob.contains("-"))
-            {
-                if(cronJob.contains("/"))
-                {
-                    QString tmp = cronJob.section("-", 1, 1);
-                    tmp = tmp.section("/", 0, 0);
-                    int finish = tmp.toInt();
-                    tmp.clear();
+        }
+        catch(int)
+        {
+            std::cout << "[Scheduller]: Error: Invalid value in a cronjob \"";
+            std::cout << cronJob.toStdString() << "\"\n";
+        }
+    }
+    else if(cronJob.contains("-"))
+    {
+        int start = minLimit;
+        int finish = maxLimit;
+        int step = 1;
+        //выражение типа start-finish/step
+        if(cronJob.contains("/"))
+            step = cronJob.section("/", 1, 1).toInt();
 
-                    tmp = cronJob.section("-", 0, 0);
-                    int start = tmp.toInt();
+        start = cronJob.section("-", 0, 0).toInt();
+        QString tmp = cronJob.section("-", 1, 1);
+        tmp = tmp.section("/", 0, 0);
+        finish = tmp.toInt();
 
-                    int step = cronJob.section("/", 1, 1).toInt();
-
-                    for(int i=start; i<=finish; i+=step)
-                        //значения типа start-finish/step
-                        res.append(i);
-                }
-                else
-                {
-                    int start = cronJob.section("-", 0, 0).toInt();
-                    int finish = cronJob.section("-", 1, 1).toInt();
-                    if(start >= minLimit && finish <= maxLimit)
-                        for(int j=start; j<=finish; j++)
-                        {
-                            //интервал "start"-"finish"
-                            res.append(j);
-                        }
-                    else res.append(0);
-                }
-            }
-            else if(cronJob.contains(","))
-            {
-                QStringList result;
-                result = cronJob.split(",");
-                //перечень значений через ","
-                for(int j=0; j<result.size(); j++)
-                    if(result.at(j).toInt() >= minLimit && result.at(j).toInt() <= maxLimit)
-                        res.append(result.at(j).toInt());
-                    else res.append(0);
-            }
-            else if(cronJob.contains("/"))
-            {
-                int start = cronJob.section("/", 0, 0).toInt();
-                int step = cronJob.section("/", 1, 1).toInt();
-                if(start >= minLimit && start <= maxLimit)
-                    for(int i=start; i<=maxLimit; i=i+step)
-                        //значения типа start/step
-                        res.append(i);
-            }
-            else if((cronJob.toInt() <= maxLimit) && (cronJob.toInt() >= minLimit))
-            {
-                res.append(cronJob.toInt());
-            }
+        try
+        {
+            if(step < minLimit || step > maxLimit)
+                throw step;
+            else if(start < minLimit || start > maxLimit)
+                throw start;
+            else if(finish < minLimit || finish > maxLimit)
+                throw finish;
             else
             {
-                res.append(0);
+                for(int i = start; i <= finish; i += step)
+                    res.append(i);
             }
-        return res;
+        }
+        catch(int)
+        {
+            std::cout << "[Scheduller]: Error: Invalid value in a cronjob \"";
+            std::cout << cronJob.toStdString() << "\"\n";
+        }
+
+    }
+    //выражение типа value[1], value[2], ..., value[n]
+    else if(cronJob.contains(","))
+    {
+        QStringList result;
+        result = cronJob.split(",");
+        for(int i=0; i<result.size(); i++)
+        {
+            try
+            {
+                if(result.at(i).toInt() < minLimit || result.at(i).toInt() > maxLimit)
+                    throw result.at(i);
+                else res.append(result.at(i).toInt());
+            }
+            catch(int)
+            {
+                std::cout << "[Scheduller]: Error: Invalid value in a cronjob \"";
+                std::cout << cronJob.toStdString() << "\"\n";
+            }
+        }
+    }
+    //выражение типа start/step
+    else if(cronJob.contains("/"))
+    {
+        int start = cronJob.section("/", 0, 0).toInt();
+        int step = cronJob.section("/", 1, 1).toInt();
+        try
+        {
+            if(start < minLimit || start > maxLimit)
+                throw start;
+            else if(step < minLimit || step > maxLimit)
+                throw step;
+            else
+            {
+                for(int i = start; i <= maxLimit; i+= step)
+                    res.append(i);
+            }
+        }
+        catch(int)
+        {
+            std::cout << "[Scheduller]: Error: Invalid value in a cronjob \"";
+            std::cout << cronJob.toStdString() << "\"\n";
+        }
+    }
+    //выражение типа value
+    else
+    {
+        try
+        {
+            if(cronJob.toInt() < minLimit || cronJob.toInt() > maxLimit)
+                throw cronJob.toInt();
+            else res.append(cronJob.toInt());
+        }
+        catch(int)
+        {
+            std::cout << "[Scheduller]: Error: Invalid value in a cronjob \"";
+            std::cout << cronJob.toStdString() << "\"\n";
+        }
+    }
+    return res;
 }
 
+//метод выбирает все возможные даты вызова функции по cron-выражению
 QVector <QDateTime> CronParser::calcDateUnit(QVector<int> time, QVector <QDateTime> nextDate, int limit)
 {
     QDateTime date;
@@ -316,6 +355,7 @@ QVector <QDateTime> CronParser::calcDateUnit(QVector<int> time, QVector <QDateTi
     return newDate;
 }
 
+//метод выбирает ближайшую дату вызова функции
 QDateTime CronParser::chooseReactionDate(QVector<QDateTime> dateList)
 {
     QDateTime current = QDateTime::currentDateTime();
@@ -335,6 +375,7 @@ QDateTime CronParser::chooseReactionDate(QVector<QDateTime> dateList)
     return min;
 }
 
+//деструктор
 CronParser::~CronParser()
 {
 

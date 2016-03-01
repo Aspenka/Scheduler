@@ -22,7 +22,7 @@ class CronParser : public QObject
     Q_OBJECT
 private:
     QString cronJob;            //cron-выражение
-    QDateTime cronDate;         //дата срабатывания
+    QDateTime cronDate;         //дата вызова функции
     QVector <int>   minute,     //значение минут
                     hour,       //значение часов
                     dayOfMonth, //значение дней месяца
@@ -31,16 +31,17 @@ private:
 
     QVector <int> parse(QString cronJob, int minLimit, int maxLimit);   //метод обрабатывает cron-выражение и возвращает
                                                                         //значение срабатывания для каждой единицы времени
-    QDateTime calcTaskDate();
-    QVector<QDateTime> calcDateUnit(QVector<int> time, QVector <QDateTime> nextDate, int limit);
-    QDateTime chooseReactionDate(QVector<QDateTime> dateList);
+    QDateTime calcTaskDate();   //метод парсит cron-выражение и рассчитывает ближайшую дату вызова функции
+    QVector<QDateTime> calcDateUnit(QVector<int> time, QVector <QDateTime> nextDate, int limit);    //метод выбирает все возможные
+                                                                                                    //даты вызова функции по cron-выражению
+    QDateTime chooseReactionDate(QVector<QDateTime> dateList);  //метод выбирает ближайшую дату вызова функции
 
 public:
-    explicit CronParser(QObject *parent = 0);
-    ~CronParser();
+    explicit CronParser(QObject *parent = 0);   //конструктор
+    ~CronParser();  //деструктор
 
-    QString getCronJob();
-    QDateTime getDateTime(QString cron);
+    QString getCronJob();   //метод возвращает cron-выражение
+    QDateTime getDateTime(QString cron);    //метод возвращает время ближайшего вызова функции
 
 signals:
 
