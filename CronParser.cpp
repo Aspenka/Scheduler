@@ -1,6 +1,7 @@
 #include "CronParser.h"
 #include <iostream>
 #include <QStringList>
+#include <QRegExp>
 
 //конструктор
 CronParser::CronParser(QObject *parent) : QObject(parent)
@@ -28,7 +29,7 @@ QDateTime CronParser::calcTaskDate()
 {
     QVector<QDateTime> dateList,
                        tmp;
-    QDateTime optimalDate = QDateTime::currentDateTime();
+    QDateTime optimalDate;
     QStringList crons = cronJob.split(" ");                         //делим строку на части по пробелам;
     try
     {
@@ -83,65 +84,20 @@ QDateTime CronParser::calcTaskDate()
 QVector<int> CronParser::parse(QString cronJob, int minLimit, int maxLimit)
 {
     QVector <int> res;
-    if(cronJob.contains("*"))
-    {
-        int step = 1;
-        //выражение типа */step
-        if(cronJob.contains("/"))
-            step = cronJob.section("/", 1, 1).toInt();
-        try
-        {
-            if(step < minLimit || step > maxLimit)
-                throw step;
-            else
-            {
-                for(int i = minLimit; i <= maxLimit; i += step)
-                    res.append(i);
-            }
-        }
-        catch(int)
-        {
-            std::cout << "[Scheduller]: Error: Invalid value in a cronjob \"";
-            std::cout << cronJob.toStdString() << "\"\n";
-        }
-    }
-    else if(cronJob.contains("-"))
-    {
-        int start = minLimit;
-        int finish = maxLimit;
-        int step = 1;
-        //выражение типа start-finish/step
-        if(cronJob.contains("/"))
-            step = cronJob.section("/", 1, 1).toInt();
 
-        start = cronJob.section("-", 0, 0).toInt();
-        QString tmp = cronJob.section("-", 1, 1);
-        tmp = tmp.section("/", 0, 0);
-        finish = tmp.toInt();
+    int step = 1;
+    int start = minLimit;
+    int finish = maxLimit;
 
-        try
-        {
-            if(step < minLimit || step > maxLimit)
-                throw step;
-            else if(start < minLimit || start > maxLimit)
-                throw start;
-            else if(finish < minLimit || finish > maxLimit)
-                throw finish;
-            else
-            {
-                for(int i = start; i <= finish; i += step)
-                    res.append(i);
-            }
-        }
-        catch(int)
-        {
-            std::cout << "[Scheduller]: Error: Invalid value in a cronjob \"";
-            std::cout << cronJob.toStdString() << "\"\n";
-        }
+    QRegExp comma("((\\d+)(,))+(\\d+)");
+    QRegExp value("(\\d+)");
+    QRegExp star("\\*");
+    QRegExp starStep("(\\*)(\\/)(\\d+)");
+    QRegExp startStep("(\\d+)(\\/)(\\d+)");
+    QRegExp startFinish("(\\d+)(\\-)(\\d+)");
+    QRegExp startFinishStep("(\\d+)(\\-)(\\d+)(\\/)(\\d+)");
 
-    }
-    //выражение типа value[1], value[2], ..., value[n]
-    else if(cronJob.contains(","))
+    if(comma.exactMatch(cronJob))
     {
         QStringList result;
         result = cronJob.split(",");
@@ -153,18 +109,54 @@ QVector<int> CronParser::parse(QString cronJob, int minLimit, int maxLimit)
                     throw result.at(i);
                 else res.append(result.at(i).toInt());
             }
-            catch(int)
+            catch(QString)
             {
                 std::cout << "[Scheduller]: Error: Invalid value in a cronjob \"";
                 std::cout << cronJob.toStdString() << "\"\n";
             }
         }
     }
-    //выражение типа start/step
-    else if(cronJob.contains("/"))
+    else if(value.exactMatch(cronJob))
     {
-        int start = cronJob.section("/", 0, 0).toInt();
-        int step = cronJob.section("/", 1, 1).toInt();
+        try
+        {
+            if(cronJob.toInt() < minLimit || cronJob.toInt() > maxLimit)
+                throw cronJob.toInt();
+            else res.append(cronJob.toInt());
+        }
+        catch(int)
+        {
+            std::cout << "[Scheduller]: Error: Invalid value in a cronjob \"";
+            std::cout << cronJob.toStdString() << "\"\n";
+        }
+    }
+    else
+    {
+        if(star.exactMatch(cronJob))
+            step = 1;
+        else if(starStep.exactMatch(cronJob))
+            step = cronJob.section("/", 1, 1).toInt();
+        else if(startStep.exactMatch(cronJob))
+        {
+            start = cronJob.section("/", 0, 0).toInt();
+            step = cronJob.section("/", 1, 1).toInt();
+        }
+        else if(startFinish.exactMatch(cronJob))
+        {
+            start = cronJob.section("-", 0, 0).toInt();
+            finish = cronJob.section("-", 1, 1).toInt();
+        }
+        else if(startFinishStep.exactMatch(cronJob))
+        {
+            step = cronJob.section("/", 1, 1).toInt();
+            start = cronJob.section("-", 0, 0).toInt();
+            QString tmp = cronJob.section("-", 1, 1);
+            tmp = tmp.section("/", 0, 0);
+            finish = tmp.toInt();
+        }
+        else
+            start = -1;
+
         try
         {
             if(start < minLimit || start > maxLimit)
@@ -173,24 +165,9 @@ QVector<int> CronParser::parse(QString cronJob, int minLimit, int maxLimit)
                 throw step;
             else
             {
-                for(int i = start; i <= maxLimit; i+= step)
+                for(int i = start; i <= finish; i+= step)
                     res.append(i);
             }
-        }
-        catch(int)
-        {
-            std::cout << "[Scheduller]: Error: Invalid value in a cronjob \"";
-            std::cout << cronJob.toStdString() << "\"\n";
-        }
-    }
-    //выражение типа value
-    else
-    {
-        try
-        {
-            if(cronJob.toInt() < minLimit || cronJob.toInt() > maxLimit)
-                throw cronJob.toInt();
-            else res.append(cronJob.toInt());
         }
         catch(int)
         {

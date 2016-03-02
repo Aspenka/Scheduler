@@ -5,7 +5,6 @@
 #-------------------------------------------------
 
 QT       -= gui
-QT       += testlib
 
 TARGET   = Sheduller
 CONFIG   += console
@@ -18,11 +17,9 @@ TEMPLATE = app
 SOURCES += main.cpp \
     MyScheduller.cpp \
     CronParser.cpp \
-    Timer.cpp \
-    ../tests/test.cpp
+    Timer.cpp 
 
 HEADERS += \
     MyScheduller.h \
     CronParser.h \
-    Timer.h \
-    ../tests/test.h
+    Timer.h 
