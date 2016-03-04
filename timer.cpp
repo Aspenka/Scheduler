@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <QTimerEvent>
 #include <QDateTime>
+#include <QDebug>
 
 //конструктор
 Timer::Timer(QObject *parent) : QObject(parent)
@@ -57,6 +58,7 @@ void Timer::timerEvent(QTimerEvent *event)
         if(!singShot)
         {
             nextExec = parser.getDateTime(cronJob).toTime_t();
+            if(calcDiffTime() == 0)parser.setCall(true);
             timerId = startTimer(calcDiffTime());
         }
     }

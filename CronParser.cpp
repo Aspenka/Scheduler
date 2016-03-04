@@ -8,6 +8,7 @@ CronParser::CronParser(QObject *parent) : QObject(parent)
 {
     cronJob = "";
     cronDate = QDateTime::currentDateTime();
+    isCalled = false;
 }
 
 //метод возвращает cronJob
@@ -27,8 +28,6 @@ QDateTime CronParser::getDateTime(QString cron)
 //метод парсит cron-выражение и рассчитывает ближайшую дату вызова функции
 QDateTime CronParser::calcTaskDate()
 {
-    QVector<QDateTime> dateList,
-                       tmp;
     QDateTime optimalDate;
     QStringList crons = cronJob.split(" ");                         //делим строку на части по пробелам;
     try
@@ -39,37 +38,52 @@ QDateTime CronParser::calcTaskDate()
         }
         else
         {
-            month = parse(crons.at(3), 1, MONTHS);
-            tmp = calcDateUnit(month, dateList, MONTHS);
-            dateList = tmp;
-            tmp.clear();
+            int value;
+            value = QTime::currentTime().minute();
+            if(isCalled != true)
+            {
+                value += 1;
+                setCall(false);
+            }
+            minute = parse(crons.at(0), value, 0, 59);
 
-            int dow = QDate::currentDate().daysInMonth();
-            dayOfMonth = parse(crons.at(2), 1, dow);
-            tmp = calcDateUnit(dayOfMonth, dateList, dow);
-            dateList.clear();
-            dateList = tmp;
-            tmp.clear();
+            value = QTime::currentTime().hour();
+            if(minute.second != false)value +=1;
+            hour = parse(crons.at(1), value, 0, 23);
 
-            dayOfWeek = parse(crons.at(4), 1, DAYS_OF_WEEK);
-            tmp = calcDateUnit(dayOfWeek, dateList, DAYS_OF_WEEK);
-            dateList.clear();
-            dateList = tmp;
-            tmp.clear();
+            value = QDate::currentDate().day();
+            if(hour.second != false)value += 1;
+            dayOfMonth = parse(crons.at(2), value, 1, QDate::currentDate().daysInMonth());
 
-            hour = parse(crons.at(1), 0, HOURS);
-            tmp = calcDateUnit(hour, dateList, HOURS);
-            dateList.clear();
-            dateList = tmp;
-            tmp.clear();
+            value = QDate::currentDate().month();
+            if(dayOfMonth.second != false)value += 1;
+            month = parse(crons.at(3), value, 1, 12);
 
-            minute = parse(crons.at(0), 0, MINUTES);
-            tmp = calcDateUnit(minute, dateList, MINUTES);
-            dateList.clear();
-            dateList = tmp;
-            tmp.clear();
+            year.first = QDate::currentDate().year();
+            if(month.second != false)year.first += 1;
 
-            optimalDate = chooseReactionDate(dateList);
+            value = QDate::currentDate().dayOfWeek();
+            dayOfWeek = parse(crons.at(4), value, 1, 7);
+
+            if(dayOfWeek.first < value)dayOfWeek.first = value - dayOfWeek.first;
+            else if(dayOfWeek.first == value) dayOfWeek.first = 0;
+            else dayOfWeek.first = 7 - dayOfWeek.first + value;
+
+            value = QDate::currentDate().day() + dayOfWeek.first;
+            try
+            {
+                if(crons.at(2) == "*")dayOfMonth.first = value;
+                else if(dayOfWeek.first != value)
+                    throw value;
+            }
+            catch(int)
+            {
+                std::cout << "[Scheduller]: Error: Invalid cronjob \"";
+                std::cout << cronJob.toStdString() << "\". Day of week does not correspond with day of month\n";
+            }
+
+            optimalDate.setDate(QDate(year.first, month.first, dayOfMonth.first));
+            optimalDate.setTime(QTime(hour.first, minute.first, 0));
         }
     }
     catch(int)
@@ -81,9 +95,11 @@ QDateTime CronParser::calcTaskDate()
 }
 
 //метод парсит cron-выражения
-QVector<int> CronParser::parse(QString cronJob, int minLimit, int maxLimit)
+QPair<int, bool> CronParser::parse(QString cronJob, int var, int minLimit, int maxLimit)
 {
-    QVector <int> res;
+    QPair <int, bool> res;
+    res.first = var;
+    res.second = false;
 
     int step = 1;
     int start = minLimit;
@@ -101,19 +117,29 @@ QVector<int> CronParser::parse(QString cronJob, int minLimit, int maxLimit)
     {
         QStringList result;
         result = cronJob.split(",");
-        for(int i=0; i<result.size(); i++)
+        int i=0;
+        bool f = false;
+        while(i < result.size() && result.at(i).toInt() < var)
+            i++;
+        if(i == result.size())
         {
-            try
+            i = 0;
+            f = true;
+        }
+        try
+        {
+            if(result.at(i).toInt() < minLimit && result.at(i).toInt() > maxLimit)
+                throw result.at(i);
+            else
             {
-                if(result.at(i).toInt() < minLimit || result.at(i).toInt() > maxLimit)
-                    throw result.at(i);
-                else res.append(result.at(i).toInt());
+                res.first = result.at(i).toInt();
+                res.second = f;
             }
-            catch(QString)
-            {
-                std::cout << "[Scheduller]: Error: Invalid value in a cronjob \"";
-                std::cout << cronJob.toStdString() << "\"\n";
-            }
+        }
+        catch(QString)
+        {
+            std::cout << "[Scheduller]: Error: Invalid value in a cronjob \"";
+            std::cout << cronJob.toStdString() << "\"\n";
         }
     }
     else if(value.exactMatch(cronJob))
@@ -122,7 +148,11 @@ QVector<int> CronParser::parse(QString cronJob, int minLimit, int maxLimit)
         {
             if(cronJob.toInt() < minLimit || cronJob.toInt() > maxLimit)
                 throw cronJob.toInt();
-            else res.append(cronJob.toInt());
+            else
+            {
+                if(cronJob.toInt() < var) res.second = true;
+                res.first = cronJob.toInt();
+            }
         }
         catch(int)
         {
@@ -161,12 +191,21 @@ QVector<int> CronParser::parse(QString cronJob, int minLimit, int maxLimit)
         {
             if(start < minLimit || start > maxLimit)
                 throw start;
+            else if(finish < minLimit || finish > maxLimit)
+                throw finish;
             else if(step < minLimit || step > maxLimit)
                 throw step;
             else
             {
-                for(int i = start; i <= finish; i+= step)
-                    res.append(i);
+                int i = start;
+                while(i < var && i <= finish)
+                    i += step;
+                if(i > finish)
+                {
+                    res.first = start;
+                    res.second = true;
+                }
+                else res.first = i;
             }
         }
         catch(int)
@@ -178,178 +217,9 @@ QVector<int> CronParser::parse(QString cronJob, int minLimit, int maxLimit)
     return res;
 }
 
-//метод выбирает все возможные даты вызова функции по cron-выражению
-QVector <QDateTime> CronParser::calcDateUnit(QVector<int> time, QVector <QDateTime> nextDate, int limit)
+void CronParser::setCall(bool var)
 {
-    QDateTime date;
-    if(nextDate.size()<1)
-        nextDate.append(QDateTime::currentDateTime());
-    QVector <QDateTime> newDate = nextDate;
-
-    switch(limit)
-    {
-        case MINUTES:
-        {
-            int k=0;
-            for(int i=0; i<time.size(); i++)
-            {
-                for(int j=0; j<nextDate.size(); j++)
-                {
-                    int m = nextDate.at(j).time().minute();
-                    if(m<time.at(i))
-                        date = nextDate.at(j).addSecs(60*std::abs(time.at(i)-m));
-                    else
-                    {
-                        QTime temp = nextDate.at(j).time();
-                        date.setTime(QTime(temp.hour(), time.at(i)));
-                        date.setDate(nextDate.at(j).date());
-                    }
-                    if(k>=nextDate.size())
-                        newDate.append(date);
-                    else
-                    {
-                        newDate.remove(j);
-                        newDate.insert(j, date);
-                    }
-                    k++;
-                }
-            }
-            break;
-        }
-        case HOURS:
-        {
-            int k=0;
-            for(int i=0; i<time.size(); i++)
-            {
-                for(int j=0; j<nextDate.size(); j++)
-                {
-                    int h = nextDate.at(j).time().hour();
-                    if(h<time.at(i))
-                        date = nextDate.at(j).addSecs(3600*std::abs(time.at(i)-h));
-                    else
-                    {
-                        QTime temp = nextDate.at(j).time();
-                        date.setTime(QTime(time.at(i), temp.minute()));
-                        date.setDate(nextDate.at(j).date());
-                    }
-                    if(k>=nextDate.size())
-                        newDate.append(date);
-                    else
-                    {
-                        newDate.remove(j);
-                        newDate.insert(j, date);
-                    }
-                    k++;
-                }
-            }
-            break;
-        }
-        case DAYS_OF_MONTH:
-        {
-            int k=0;
-            for(int i=0; i<time.size(); i++)
-            {
-                for(int j=0; j<nextDate.size(); j++)
-                {
-                    int m = nextDate.at(j).date().day();
-                    if(m<time.at(i))
-                        date = nextDate.at(j).addDays(std::abs(time.at(i)-m));
-                    else
-                    {
-                        QDate temp = nextDate.at(j).date();
-                        date.setDate(QDate(temp.year(), temp.month(), time.at(i)));
-                        date.setTime(nextDate.at(j).time());
-                    }
-                    if(k>=nextDate.size())
-                        newDate.append(date);
-                    else
-                    {
-                        newDate.remove(j);
-                        newDate.insert(j, date);
-                    }
-                    k++;
-                }
-            }
-            break;
-        }
-        case MONTHS:
-        {
-            int k=0;
-            for(int i=0; i<time.size(); i++)
-            {
-                for(int j=0; j<nextDate.size(); j++)
-                {
-
-                    int m = nextDate.at(j).date().month();
-                    if(m<time.at(i))
-                        date = nextDate.at(j).addMonths(std::abs(time.at(i)-m));
-                    else
-                    {
-                        QDate temp = nextDate.at(j).date();
-                        date.setDate(QDate(temp.year(), time.at(i), temp.day()));
-                        date.setTime(nextDate.at(j).time());
-                    }
-                    if(k>=nextDate.size())
-                        newDate.append(date);
-                    else
-                    {
-                        newDate.remove(j);
-                        newDate.insert(j, date);
-                    }
-                    k++;
-                }
-            }
-            break;
-        }
-        case DAYS_OF_WEEK:
-        {
-            int k=0;
-            for(int i=0; i<time.size(); i++)
-            {
-                for(int j=0; j<nextDate.size(); j++)
-                {
-                    int d = nextDate.at(j).date().dayOfWeek();
-                    if(d<time.at(i))
-                        date = nextDate.at(j).addDays(std::abs(time.at(i)-d));
-                    else
-                    {
-                        d = 7 - d + time.at(i);
-                        date = nextDate.at(j).addDays(d);
-                    }
-                    if(k>=nextDate.size())
-                        newDate.append(date);
-                    else
-                    {
-                        newDate.remove(j);
-                        newDate.insert(j, date);
-                    }
-                    k++;
-                }
-            }
-            break;
-        }
-    }
-    return newDate;
-}
-
-//метод выбирает ближайшую дату вызова функции
-QDateTime CronParser::chooseReactionDate(QVector<QDateTime> dateList)
-{
-    QDateTime current = QDateTime::currentDateTime();
-    QVector<QDateTime> temp;
-    for(int i=0; i<dateList.size(); i++)
-    {
-        if(dateList.at(i)>=current)
-            temp.append(dateList.at(i));
-    }
-    if(temp.empty())temp = dateList;
-    QDateTime min = temp.at(0);
-    for(int i=0; i<temp.size(); i++)
-    {
-        if(temp.at(i) <= min)
-            min = temp.at(i);
-    }
-    return min;
+    isCalled = var;
 }
 
 //деструктор
